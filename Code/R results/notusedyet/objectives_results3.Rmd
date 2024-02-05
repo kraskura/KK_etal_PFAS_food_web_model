@@ -1,0 +1,382 @@
+---
+title: "Can we backwards predict water and sediment concentrations if we have known fish tissue PFAS?"
+author: "K. Kraskura"
+date: "`r Sys.Date()`"
+output: 
+  # pdf_document:
+  html_document:
+  theme: united
+  highlight: tango
+  code_folding: hide
+
+# output: html_notebook
+---
+
+#### OBJECTIVES:
+
+1. To explore what are the relative proportions between water, sediment, and PFAS (use best model objective-4 data)
+2. Exclude sediment link and then see how much underestimated the values are? (objective 5 data tables)
+
+
+
+
+```{r source, warning=FALSE, message=FALSE, echo=TRUE}
+
+library(kableExtra)
+library(dplyr)
+library(tidyverse)
+library(broom)
+library(tidyr)
+library(ggplot2)
+library(reshape)
+library(tibble) # needed to get named list of dataframes (in data_tables.R)
+library(readxl)
+library(ggformat2)
+
+# functions to run food web model
+source("../Code/PFAS_bioaccum_v2.R") 
+source("../Code/PFAS_classes_v2.R")
+source("../Code/PFAS_steadyState_v2.R")
+source("../Code/runEcosystemModels.R") # custom written
+source("../Code/runParamSelection.R")
+source("../Code/runErrorEstimates.R")
+source("../Code/data_tables.R")
+source("../Code/PFAS_tissuePart_v2.R")
+
+# source data tables for each objective
+kRTable = read.csv('../Data/export_krTable.csv', row.names = "X", header = T)
+colnames(kRTable)<-c("kr/kb", "PFAA", "chemID")
+PFAS_List <- c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')
+PFAS_labels <- c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA','C11 PFCA')
+PFAA_cols <- c('PFHxS' = '#332288', # 
+             'PFOS' = '#882255', # 
+             'PFOA' = '#117733',
+             'PFNA' = '#88CCEE',
+             'PFDA' = 'orange',
+             'PFUA' = '#AA4499')
+
+p_lines <- data.frame('x' = c(0, 7),
+                      'y' = c(0, 7))
+p_lines$y1 <- p_lines$x-1
+p_lines$y2 <- p_lines$x+1
+p_lines$y3 <- p_lines$x-log10(2)
+p_lines$y4 <- p_lines$x+log10(2)
+
+```
+
+<br>
+
+```{r all locations obj 1}
+settings_modelDiet = new_Settings(
+  chooseStudyType = 'default',
+  chooseDiet = 'default',
+  chooseKoc = 'Koc',
+  chooseRenal ='off'
+)
+
+# WG 
+source("../Code/data tables/WG_data_obj1.R")
+AllData_wg<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+
+# JBA spring
+source("../Code/data tables/JBA_data_spr_obj1.R") 
+AllData_jba_sp<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+# JBA summer 
+source("../Code/data tables/JBA_data_sum_obj1.R") 
+AllData_jba_sum<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+AllData_wg$loc<-"WG"
+AllData_jba_sp$loc<-"JBA sp"
+AllData_jba_sum$loc<-"JBA sum"
+AllData<-rbind(AllData_wg, AllData_jba_sum, AllData_jba_sp)
+AllData <- AllData[!c(AllData$PFAA == "PFUA" ),]
+
+```
+
+
+```{r all locations obj 5}
+settings_modelDiet = new_Settings(
+  chooseStudyType = 'default',
+  chooseDiet = 'default',
+  chooseKoc = 'Koc',
+  chooseRenal ='off'
+)
+
+# WG 
+source("../Code/data tables/WG_data_obj5.R")
+AllData5_wg<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+
+# JBA spring
+source("../Code/data tables/JBA_data_spr_obj5.R") 
+AllData5_jba_sp<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+# JBA summer 
+source("../Code/data tables/JBA_data_sum_obj5.R") 
+AllData5_jba_sum<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+AllData5_wg$loc<-"WG"
+AllData5_jba_sp$loc<-"JBA sp"
+AllData5_jba_sum$loc<-"JBA sum"
+AllData5<-rbind(AllData5_wg, AllData5_jba_sum, AllData5_jba_sp)
+AllData5 <- AllData5[!c(AllData5$PFAA == "PFUA" ),]
+
+
+```
+```{r plots for no sediment transfer}
+
+ggplot(data = AllData5, aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_point(pch = 19, size = 3)+
+    theme_bw()+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'Observed diet')+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Observed log PFAA (ng/kg)')+
+    # coord_cartesian(ylim = c(2,6.5), xlim = c(2,6.5))+
+    theme(legend.position = "none")
+
+ggplot(data = AllData, aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_point(pch = 19, size = 3)+
+    theme_bw()+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'Observed diet')+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Observed log PFAA (ng/kg)')+
+    # coord_cartesian(ylim = c(2,6.5), xlim = c(2,6.5))+
+    theme(legend.position = "none")
+# p1_fish
+
+AllData5$log_ngkg_re - AllData$log_ngkg_re
+summary(AllData$log_ngkg_re - AllData$Obs_logngkg)
+summary(AllData5$log_ngkg_re - AllData5$Obs_logngkg)
+
+AllData0<-merge(AllData[, c("log_ngkg_re", "Obs_logngkg", "PFAA", "loc", "SppAlias")], AllData5[, c("log_ngkg_re", "Obs_logngkg", "PFAA", "loc",  "SppAlias")], by = c("loc", "PFAA", "SppAlias") )
+
+```
+
+```{r}
+
+p_sed_supl<-ggplot(data = AllData0,
+           aes(color = PFAA, fill = PFAA, 
+               x = PFAA,
+               y =log_ngkg_re.x - log_ngkg_re.y))+
+  geom_violin()+
+  scale_color_manual(values = PFAA_cols)+
+  scale_fill_manual(values = PFAA_cols)+
+  theme_bw()+
+  ylim(0, 0.025)
+
+  # scale_x_discrete(labels = c("JBA \n spring", "JBA \n summer", "Willow \nGrove"))
+ggformat(p_sed_supl, y_title = "Difference in predicted PFAA values (log(ng/g))", 
+         x_title = "PFAA", size_text = 12)
+p_sed_supl<-p_sed_supl + theme(legend.position = "none")
+
+ggsave(filename = "../Figures/fig7_nov1_Sed_comparison.png", plot = p_sed_supl, height = 4, width = 4)
+
+```
+
+
+#### Metabolism, uptake and elimination
+
+
+```{r plot metabolism k1, echo = FALSE, message=FALSE, warning=FALSE, fig.height = 3, fig.width = 8, fig.align = "center"}
+
+AllData$Elim_DietUp_ratio<-AllData$Dietary_uptake/AllData$`Total Elimination`
+AllData$Elim_GillUp_ratio<-AllData$Gill_uptake/AllData$`Total Elimination`
+AllData$Sed_Water_ratio<-AllData$C_WTO/AllData$C_s
+AllData$Sed_Tissue_ratio<-AllData$Obs_ngg/AllData$C_s
+AllData$Water_Tissue_ratio<-AllData$Obs_ngg/AllData$C_WTO
+
+```
+
+
+```{r plot2, echo = FALSE, message=FALSE, warning=FALSE, fig.height = 4.3, fig.width = 8, fig.align = "center"}
+
+
+p1<-ggplot(AllData, aes( y=log_ngkg_re, x=C_WTO/C_s, 
+                         group = PFAA,
+                         color = PFAA,
+                         shape = loc)) + 
+  geom_point()+
+  ylab("Modeled tissue PFAA")+
+  xlab("Ratio, water:sediment PFAA")+
+  geom_smooth(method = "lm", linewidth = 0.5, alpha = 0.3, se = F)+
+  theme_bw()+
+  scale_shape_manual(values = c(19, 21, 23))+
+  scale_color_manual(values = PFAA_cols)+
+  # scale_fill_manual(values = PFAA_cols)+
+  theme(legend.position = "top")
+ggformat(p1, y_title = "Modeled tissue PFAA log(ng/kg)", x_title = "PFAA water:sediment (ng/mL : ng/g)", size_text = 12 )
+p1<-p1+theme(legend.position = "none")
+
+p2<-ggplot(AllData, aes( y=Obs_logngkg, x=C_WTO/C_s, 
+                         group = PFAA,
+                         color = PFAA,
+                         shape = loc)) + 
+  geom_point()+
+  ylab("Observed tissue PFAA")+
+  xlab("Ratio, water:sediment PFAA")+
+  geom_smooth(method = "lm", linewidth = 0.5, alpha = 0.3, se = F)+
+  theme_bw()+
+  scale_shape_manual(values = c(19, 21, 23))+
+  scale_color_manual(values = PFAA_cols)+
+  # scale_fill_manual(values = PFAA_cols)+
+  theme(legend.position = "right")
+ggformat(p2, y_title = "Observed tissue PFAA log(ng/kg)", x_title = "PFAA water:sediment (ng/mL : ng/g)", size_text = 12 )
+
+
+fig1<-cowplot::plot_grid(p1, p2,
+                   ncol = 2,
+                   nrow = 1,
+        labels = c("", ""), rel_widths = c(1, 1.33))
+fig1
+
+
+ggsave(filename = "../Figures/fig6_nov1_sed.png", plot = fig1, height = 3.5, width = 8)
+
+
+
+```
+
+
+
+```{r plot3, echo = FALSE, message=FALSE, warning=FALSE, fig.height = 4.3, fig.width = 8, fig.align = "center"}
+
+
+p3<-ggplot(AllData, aes( y=Water_Tissue_ratio, x=PFAA, group = loc, color = PFAA, fill = PFAA)) + 
+  geom_point(alpha = 1)+
+  facet_grid(.~loc)+
+  # geom_point(mapping = aes( y=Obs_logngkg, x=C_WTO/C_s, group = PFAA, color = PFAA, fill = PFAA, shape = loc), pch=1)+
+  # ylab("Predicted tissue PFAA")+
+  # xlab("Ratio, water:sediment PFAA")+
+  theme_bw()+
+  scale_color_manual(values = PFAA_cols)+
+  scale_fill_manual(values = PFAA_cols)+
+  theme(legend.position = "top")
+
+p4<-ggplot(AllData, aes( y=Sed_Tissue_ratio, x=PFAA, group = loc, color = PFAA, fill = PFAA)) + 
+  geom_point(alpha = 1)+
+  facet_grid(.~loc)+
+  # geom_point(mapping = aes( y=Obs_logngkg, x=C_WTO/C_s, group = PFAA, color = PFAA, fill = PFAA, shape = loc), pch=1)+
+  # ylab("Predicted tissue PFAA")+
+  # xlab("Ratio, water:sediment PFAA")+
+  theme_bw()+
+  scale_color_manual(values = PFAA_cols)+
+  scale_fill_manual(values = PFAA_cols)+
+  theme(legend.position = "top")
+
+fig1<-cowplot::plot_grid(p3, p4,
+                   ncol = 2,
+                   nrow = 1,
+        labels = c("A", "B"))
+fig1
+
+```
+
+

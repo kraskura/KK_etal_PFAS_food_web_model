@@ -1,0 +1,906 @@
+---
+title: "Diet and water uptake of PFAS and constribution of sediments"
+subtitle: "Only objective 4"
+author: "K. Kraskura"
+date: "`r Sys.Date()`"
+output: 
+  # pdf_document:
+  html_document:
+  theme: united
+  highlight: tango
+  code_folding: hide
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+<br/>
+
+#### OBJECTIVES:
+
+##### The relative contribution of PFAA uptake via the gills and diet:
+
+5.  To describe the roles of diet and gills for each PFAA and Species (use best model; onbjective 4).
+6.  To evaluate the contribution of diet uptake when the sediment:water PFAA concentrations are different.
+7.  To characterize how bioaccumulation changes when PFAA sediment:water concentrations change.
+
+**Sun et al 2020 also demanstrate that diet play a greater role in PFAS uptake in fully benthic fish compared to benthopelagoc fish. We therefore hypothesize that this relationship reflects the roles of PFAS transfer from sediment to fish**
+
+<br/>
+
+#### HYPOTHESIS:
+
+The sediment PFAA concentrations drive the dietary uptake of PFAA across the food web. Specifically, we predict that higher PFAA concentrations, the higher the biomagnification effect, that is higher contributions of the dietary uptake of PFAA. 
+
+
+```{r source, warning=FALSE, message=FALSE, echo=TRUE}
+
+library(kableExtra)
+library(dplyr)
+library(tidyverse)
+library(broom)
+library(tidyr)
+library(ggplot2)
+library(reshape)
+library(tibble) # needed to get named list of dataframes (in data_tables.R)
+library(readxl)
+library(ggformat2)
+
+# functions to run food web model
+source("../Code/PFAS_bioaccum_v2.R") 
+source("../Code/PFAS_classes_v2.R")
+source("../Code/PFAS_steadyState_v2.R")
+source("../Code/runEcosystemModels.R") # custom written
+source("../Code/runParamSelection.R")
+source("../Code/runErrorEstimates.R")
+source("../Code/data_tables.R")
+source("../Code/PFAS_tissuePart_v2.R")
+
+# source data tables for each objective
+kRTable = read.csv('../Data/export_krTable.csv', row.names = "X", header = T)
+colnames(kRTable)<-c("kr/kb", "PFAA", "chemID")
+PFAS_List <- c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')
+PFAS_labels <- c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA','C11 PFCA')
+PFAA_cols <- c('PFHxS' = '#332288', # 
+             'PFOS' = '#882255', # 
+             'PFOA' = '#117733',
+             'PFNA' = '#88CCEE',
+             'PFDA' = 'orange',
+             'PFUA' = '#AA4499')
+
+p_lines <- data.frame('x' = c(0, 7),
+                      'y' = c(0, 7))
+p_lines$y1 <- p_lines$x-1
+p_lines$y2 <- p_lines$x+1
+p_lines$y3 <- p_lines$x-log10(2)
+p_lines$y4 <- p_lines$x+log10(2)
+
+```
+
+<br>
+
+```{r all locations obj 4}
+settings_modelDiet = new_Settings(
+  chooseStudyType = 'default',
+  chooseDiet = 'default',
+  chooseKoc = 'Koc',
+  chooseRenal ='off'
+)
+
+# WG 
+source("../Code/data tables/WG_data_obj2.R")
+AllData_wg<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+
+# JBA spring
+source("../Code/data tables/JBA_data_spr_obj2.R") 
+AllData_jba_sp<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+# JBA summer 
+source("../Code/data tables/JBA_data_sum_obj2.R") 
+AllData_jba_sum<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = inputFiles_list$max_dietData)
+
+AllData_wg$loc<-"WG"
+AllData_jba_sp$loc<-"JBA sp"
+AllData_jba_sum$loc<-"JBA sum"
+AllData<-rbind(AllData_wg, AllData_jba_sum, AllData_jba_sp)
+AllData <- AllData[!c(AllData$PFAA == "PFUA" ),]
+
+```
+
+#### Metabolism, uptake and elimination
+
+Yang et al showed positive strong relationship between uptake rate (k_1)
+and ventilation rate (Yang et al 2000, Relationship between toxicant
+transfer kinetic processes and fish oxygen consumption, Aquat Ecotox 48:
+95-108)
+
+```{r plot metabolism k1, echo = FALSE, message=FALSE, warning=FALSE, fig.height = 3, fig.width = 8, fig.align = "center", eval = FALSE}
+
+ggplot(AllData, aes(x = log(RMR), log(Gill_uptake*WB*1000), group = PFAA, shape = loc))+
+  # geom_line(linewidth = 0.5)+
+  geom_point( color =  "#00C2FF")+
+  geom_point(mapping = aes(x = log(RMR), log(Dietary_uptake*WB*1000),  group = PFAA),
+              color = "green2")+
+  # geom_line(mapping = aes(x = log(RMR), log(Dietary_uptake*WB*1000),  group = PFAA),
+             # lty = "dashed", linewidth = 0.5)+
+  geom_point(mapping = aes(x = log(RMR), log(`Total Elimination`*WB*1000),  group = PFAA),
+            color = "grey30")+
+  # geom_line(mapping = aes(x = log(RMR), log(`Total Elimination`*WB*1000),  group = PFAA),
+             # lty = "dashed", color = "grey30", linewidth = 0.5)+
+  facet_grid(~PFAA)+
+  theme_bw()+
+  geom_abline(intercept = -4, slope = 1, lty = "dashed", linewidth = 0.7, color = "grey30")+
+  ylab("log(Upatake (L/d; g/d))")+ # k =1 L/kg/d
+  xlab("log(RMR (mgO2/day))")
+
+AllData$Elim_DietUp_ratio<-AllData$Dietary_uptake/AllData$`Total Elimination`
+AllData$Elim_GillUp_ratio<-AllData$Gill_uptake/AllData$`Total Elimination`
+# 
+# ggplot(AllData, aes(Elim_DietUp_ratio, log_ngkg-Obs_logngkg, group = PFAA, shape = loc, color = PFAA))+
+#   geom_point()+
+#   theme_bw()+
+#   
+#   scale_color_manual(values = PFAA_cols)
+# 
+# ggplot(AllData, aes(Elim_GillUp_ratio, log_ngkg-Obs_logngkg, group = PFAA, shape = loc, color = PFAA))+
+#   geom_point()+
+#   theme_bw()+
+#   scale_color_manual(values = PFAA_cols)
+
+```
+
+```{r, eval = FALSE, echo = FALSE}
+# stats 
+AllData %>%
+  group_by(PFAA) %>%
+  group_modify(
+    # Use `tidy`, `glance` or `augment` to extract different information from the fitted models.
+    ~ tidy(lm(log(RMR) ~ log(Gill_uptake*WB*1000), data = .)), 
+) # 0.97 scaling across
+
+AllData %>%
+  group_by(PFAA) %>%
+  group_modify(
+    ~ tidy(lm(log(RMR) ~ log(Dietary_uptake*WB*1000), data = .))
+) 
+# 0.45 PFHxS
+# 0.54	PFNA
+# 0.46	PFOA
+# 0.655	PFOS
+
+AllData %>%
+  group_by(PFAA) %>%
+  group_modify(
+    ~ tidy(lm(log(RMR) ~ log(`Total Elimination`*WB*1000), data = .))
+) 
+# 0.96 - 1.00 all across
+```
+
+**Figure 1.** Higher RMR have higher uptake rates (green = diet, blue = gill) and total elimination (black trends) of PFAA. But.. this is confounded also by body size.
+
+Note: the increase is not linear and not the same as the size scaling
+
+1. Gill uptake 
+  - 0.97 scaling across all PFAA
+2. Dietary uptake
+  - 0.45 PFHxS
+  - 0.54	PFNA
+  - 0.46	PFOA
+  - 0.655	PFOS
+3. Elimination
+  - 0.96 - 1.00 scaling across all PFAA
+
+
+```{r, fig.height = 5, fig.width = 8, fig.align = "center", eval = FALSE}
+
+
+ggplot(AllData, aes(x = log(RMR), y = log_ngkg_re, fill= PFAA, color = PFAA, group = PFAA))+
+  geom_smooth(se = FALSE, method = "lm")+
+  geom_point(pch = 21, size = 3, color ="black")+
+  geom_point(mapping = aes(x = log(RMR), y = Obs_logngkg, fill= PFAA, color = PFAA, group = PFAA), 
+             pch = 22, size = 2, color ="black")+
+  geom_smooth(mapping = aes(x = log(RMR), y = Obs_logngkg, fill= PFAA, color = PFAA, group = PFAA),
+            lty = "dashed", se = FALSE, method = "lm")+
+  scale_fill_manual(values = PFAA_cols)+
+  scale_color_manual(values = PFAA_cols)+
+  theme_bw()+
+  facet_grid(.~PFAA)+
+  theme(legend.position = "none")+
+  ylab("log PFAA (ng/kg)") +
+  xlab("log RMR (mgO2/day)")
+
+# ggplot(AllData_fw, aes(x = log(RMR), y = log(WB), fill= PFAA, color = PFAA, group = PFAA))+
+#   geom_line()+
+#   geom_point(pch = 21, size = 3, color ="black")+
+#   scale_fill_manual(values = PFAA_cols)+
+#   scale_color_manual(values = PFAA_cols)+
+#   theme_bw()+
+#   facet_grid(.~PFAA)+
+#   theme(legend.position = "none")
+
+# lm(log(RMR) ~ log(WB), data = AllData_fw) # check, scaling 0.89
+
+
+
+
+```
+
+**Figure 2** The circles and solid line are modeled values, the squares and the dashed line are observed values. Again confounded by body size (RMR per whole fish). 
+
+<br>
+
+#### Contributions to PFAA bioaccumulation via diet and water
+
+```{r water vs gill, echo = FALSE, message = FALSE, warning  = FALSE, fig.height = 7, fig.width = 10, fig.align = "center", eval = TRUE}
+# stackbar dataset
+AllData_m<-melt(AllData[, c("SppAlias", "PFAA", "Gill_up%", "Diet_up%", "WB", "C_WTO", "C_s", "loc")], id.vars=c("loc","SppAlias", "PFAA", "WB", "C_WTO", "C_s"))
+
+# summarize means for % uptake for each run
+mean_d_pct<-AllData_m %>%
+dplyr::group_by(PFAA, SppAlias, variable, C_WTO, C_s, WB, loc) %>%
+summarize(mean_pct = mean(value),
+          sd_pct = sd(value)) 
+
+mean_d_pct_m<-mean_d_pct %>% 
+  dplyr::group_by(PFAA, variable, C_WTO, C_s) %>%
+  summarize(mean_pct = mean(mean_pct),
+          sd_pct = sd(mean_pct)) 
+  
+# summarize actual values 
+mean_d<-AllData %>%
+dplyr::group_by(PFAA, SppAlias, loc) %>%
+summarize(Gill = mean(`Gill_uptake`),
+          Diet = mean(`Dietary_uptake`),
+          Elimination = mean(`Total Elimination`), 
+          WB = mean(WB)) %>%
+pivot_longer(cols = c(Gill, Diet, Elimination), names_to = "Path", values_to = "Uptake_g.kg.day")
+
+mean_sd<-AllData %>%
+dplyr::group_by(PFAA, SppAlias, loc) %>%
+summarize(Gill = sd(`Gill_uptake`),
+          Diet = sd(`Dietary_uptake`),
+          Elimination = sd(`Total Elimination`),
+          WB = mean(WB)) %>%
+pivot_longer(cols = c(Gill, Diet, Elimination), names_to = "Path", values_to = "Uptake_SD_g.kg.day")
+
+AllData_m2 <- merge(mean_d, mean_sd, all.x = TRUE, by = c("PFAA", "SppAlias", "Path", "loc", "WB"))
+
+
+ggplot(mean_d_pct[!mean_d_pct$SppAlias == "Phy", ], aes( x=mean_pct*100, y=SppAlias, color = variable, fill = variable)) + 
+    geom_bar(stat="identity", position = "stack", color = "black", stroke = 0.2) +
+    geom_errorbarh(data = mean_d_pct[mean_d_pct$variable == "Diet_up%" & !mean_d_pct$SppAlias == "Phy", ],
+                    aes(xmin=mean_pct*100-sd_pct*100, xmax=mean_pct*100+sd_pct*100), 
+                    position = "dodge", size = 0.5, height = 0.3, color = "black")+
+    facet_wrap(loc~PFAA, scales = "free")+
+    scale_fill_manual(breaks = c("Diet_up%", "Gill_up%"), values = c("#44C08A", "#00C2FF"),
+                      labels=c("Diet uptake","Gill uptake"))+
+  ylab("Species")+
+  xlab("% Uptake")+
+  theme_bw()+
+  theme(legend.position = "top")
+```
+
+```{r diet to water uptake}
+
+p_diet_water<-ggplot(mean_d_pct[!mean_d_pct$SppAlias == "Phy" & mean_d_pct$loc == "JBA sum", ],
+       aes( x=mean_pct*100, y=SppAlias,
+            color = variable,
+            fill = variable,
+            group = loc)) + 
+    geom_bar(stat="identity", position = "stack",
+             color = "black",
+             stroke = 0.3)+
+    facet_wrap(.~PFAA, scales = "free", nrow =5)+
+    scale_fill_manual(breaks = c("Diet_up%", "Gill_up%"), values = c("#44C08A", "#00C2FF"),
+                      labels=c("Diet uptake","Gill uptake"))+
+  scale_y_discrete(breaks = c("Swa",
+                              "Pum",
+                              "Min",
+                              "Mad",
+                              "Fal",
+                              "Dar",
+                              "Dac",
+                              "Bas"), 
+                   labels = c("Swallowtail Shiner",
+                              "Pumkinseed",
+                              "Mudminnow",
+                              "Margined Madtom",
+                              "Fallfish",
+                              "Darter sp.",
+                              "Dace sp.",
+                              "Largemouth Bass"))+
+  ylab("Species")+
+  xlab("% Uptake")+
+  theme_bw()+
+  theme(legend.position = "right")
+
+ggformat(p_diet_water, y_title = 'Species', x_title = "% Uptake", title = "JBA summer", size_text = 12)
+p_diet_water<-p_diet_water+ theme(legend.position = "right")
+ggsave(filename = "../Figures/fig8_deit_water_now1.png", plot = p_diet_water, height = 10, width = 5)
+
+
+
+```
+
+```{r percent diet size, echo = FALSE, message = FALSE, warning  = FALSE, fig.height = 5, fig.width = 8, fig.align = "center", eval = TRUE}
+
+
+ggplot(mean_d_pct[!mean_d_pct$SppAlias == "Phy", ], aes( y=mean_pct*100, x=C_WTO/C_s,
+                                                         color = variable,
+                                                         fill = variable,
+                                                         shape = loc)) + 
+  geom_point(alpha = 0.5)+
+    # geom_bar(stat="identity", position = "stack", color = "white") +
+    # geom_errorbarh(data = mean_d_pct[mean_d_pct$variable == "Diet_up%" & !mean_d_pct$SppAlias == "Phy", ],
+                    # aes(xmin=mean_pct*100-sd_pct*100, xmax=mean_pct*100+sd_pct*100), 
+                    # position = "dodge", size = 0.5, height = 0.3, color = "black")+
+  scale_color_manual(breaks = c("Diet_up%", "Gill_up%"), values = c("#44C08A", "#00C2FF"),
+                      labels=c("Diet uptake","Gill uptake"))+
+  scale_fill_manual(breaks = c("Diet_up%", "Gill_up%"), values = c("#44C08A", "#00C2FF"),
+                      labels=c("Diet uptake","Gill uptake"))+
+  facet_wrap(~PFAA, scales = "free")+
+  geom_point(mean_d_pct_m, mapping = aes(y=mean_pct*100, x=C_WTO/C_s, shape = NULL), pch = 21, color ="black", size = 3)+
+  geom_line(mean_d_pct_m, mapping = aes(y=mean_pct*100, x=C_WTO/C_s, shape = NULL), lty = "dotted", linewidth = 0.5)+
+  ylab("Mean % diet or gill uptake")+
+  xlab("Ratio, water:sediment PFAA")+
+  # geom_smooth(method = "lm", se = FALSE, lty = "dotted", linewidth = 0.5)+
+  theme_bw()+
+  theme(legend.position = "top")
+
+
+```
+
+**Figure 3** The proportion of diet (%) and gill uptake for each PFAA, each species, and at each system. 
+
+
+```{r uptake and depuration rates per day, echo = FALSE, message = FALSE, warning  = FALSE, fig.height = 6, fig.width = 8, fig.align = "center", eval = TRUE}
+ggplot(AllData_m2[!AllData_m2$SppAlias == "Phy", ],
+      aes(fill = Path, x = Uptake_g.kg.day, y = SppAlias, color = Path)) + 
+    geom_bar(stat="identity", position = "dodge", color = "white") +
+    # geom_pointrange(aes(y = SppAlias,
+    #                xmin=`Uptake_%g.kg.day`-`Uptake_SD_%g.kg.day`,
+    #                xmax=`Uptake_%g.kg.day`+`Uptake_SD_%g.kg.day`), position = position_dodge(width = 1))+
+    facet_wrap(.~PFAA, scales = "free")+
+    scale_fill_manual(breaks = c("Diet", "Gill", "Elimination"), values = c("#44C08A", "#00C2FF", "black"),
+                      labels=c("Diet uptake","Gill uptake", "Total Elimination"))+
+  ylab("Species")+
+  xlab("Uptake h/kg/d")+
+  theme_bw()+theme(legend.position = "top", legend.title = element_blank(), legend.text=element_text(size=15))
+
+
+```
+
+**Figure 4** The relative uptake from diet and water (gills) based on the water (ng/mL) to sediment (ng/g) ratio of each PFAA.
+Each small circle is species and each large circle is the mean of all, the line connects the means. 
+
+**Figure 5** The uptake rate or elimination rate of each PFAA by species (all locations together)
+
+<br>
+
+
+#### If there is more PFAS from diet, does that affect PFAS elimination?
+
+```{r silly, eval = FALSE}
+
+ggplot(data = AllData[!AllData$SppAlias =="Phy",], aes(x = `Diet_up%`, y = log_ngkg_re, 
+                           color = PFAA))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+
+ggplot(data = AllData[!AllData$SppAlias =="Phy",], aes(y = `Diet_up%`, x = k1, 
+                           color = PFAA))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+ggplot(data = AllData[!AllData$SppAlias =="Phy",], aes(y = `log_ngkg`, x = k2, 
+                           color = PFAA))+
+  geom_point()+
+  geom_smooth(method = "lm")
+
+
+
+
+```
+
+
+
+#### How does water:sediment PFAA ratio affect the dietary (%) PFAA uptake?
+
+Run scenarios of the model for adjusted ratios, following:
+
+1. 5 different ratios (water:sediment) within observed values in the 2 ecosystems. Took the highest observed water values at each site, and then adjusted the sediment ratios: 
+  -original: **0.001, 0.0505, 0.1, 1, 3, 5**
+  - run 2: (SETAC poster) **0.001, 0.0505, 0.1, 1, 3, 5**
+2. Water temperature, DO, etc are all set to mean observed values
+3. Only show the modeled values (not diet forced values)
+
+
+```{r BIG SEQUENCE RUN sediment ratios, message = FALSE, warning  = FALSE,  fig.height = 6, fig.width = 8, fig.align = "center"}
+# Species, water, and sediment data
+metadata<-as.data.frame(read_excel("../Data/Species_specific_info.xlsx", sheet = 1))
+i<-c(1:9)
+j<-c(10:ncol(metadata))
+# organizing data table 
+metadata[ , i] <- apply(metadata[ , i], 2,           
+                    function(x) factor((x)))
+metadata[ , j] <- apply(metadata[ , j], 2,            
+                    function(x) as.numeric(x))
+
+PFAA_List <- data.frame(PFAA = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'), PFAA_labels = c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA','C11 PFCA'), PFAA_n = c(6,8,8,9,10,11))
+
+trophicLevels = data.frame(SppAlias = c("Bas", "Bgl", "Phy", "Pry", "Kil", "Chu", "Dac", "Dar", "Min", "Mad", "Pum", "Swa", "Fal"), trophicLevel = c(3.69, 3.08, 1, 2.31, 3.4, 3.93, 2.62, 3.75, 2.92, 3.53, 3.83, 2.8, 3.25 ))
+
+# water - max for each PFAA; empirircal
+Water_WG<-(metadata[c(metadata$Site == "WG" & metadata$`Species/Sediment/Water`== "Water"), c("Tissue/Location", 'PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')])
+Water_WG[1,]<-c(NA, 155.8, 824.1, 56.35, 3.869, 0.029, 0) # the function & loop corrects it
+Water_WG<-Water_WG[1,]
+
+Water_JBAsp<-(metadata[c(metadata$Site == "JBA" & metadata$`Species/Sediment/Water`== "Water" & metadata$Season == "Spring"), c("Tissue/Location",'PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')])
+Water_JBAsp[1,]<-c(NA, 815, 881, 343, 13.40, 0.029, 0)
+Water_JBAsp<-Water_JBAsp[1,]
+
+Water_JBAsum<-(metadata[c(metadata$Site == "JBA" & metadata$`Species/Sediment/Water`== "Water" & metadata$Season == "Summer"), c("Tissue/Location",'PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')])
+Water_JBAsum[1,]<-c(NA, 2120, 1910, 729, 24.10, 0.029, 0)
+Water_JBAsum<-Water_JBAsum[1,]
+
+# sediment - ratios empirically observed
+l<-40
+# r_PFAAs <- c(seq(0.01,0.1, length.out = l/2), seq(1, 5, length.out = l/2))
+r_PFAAs<-c(seq(0.01,0.5, length.out = 0.75*l), seq(0.6, 1.5, length.out = 0.25*l))
+
+
+# r_PFHxS <- c(0.1, 1.1, 2.1, 3.1, 4.1, 5.1)
+# r_PFOS <- c(0.1, 0.4, 0.7, 1.0, 1.3, 1.6)
+# r_PFOA <- c(0.1, 0.7, 1.3, 1.9, 2.5, 3.1)
+# r_PFNA <- c(0.1, 0.14, 0.18, 0.22, 0.26, 0.3)
+    
+Sed_WG<-Water_WG 
+Sed_JBAsp<-Water_JBAsp        
+Sed_JBAsum<-Water_JBAsum
+
+# Focus on JBA summer
+source("../Code/data tables/JBA_data_sum_obj1.R")
+JBAsum_inputFiles_list<-inputFiles_list
+
+source("../Code/data tables/JBA_data_spr_obj1.R")
+JBAsp_inputFiles_list<-inputFiles_list
+
+source("../Code/data tables/WG_data_obj1.R")
+WG_inputFiles_list<-inputFiles_list
+
+
+for(i in 1:l){
+  
+  Sed_WG[1,"PFHxS"] <- (Water_WG[1, "PFHxS"]/1000) / r_PFAAs[i]  # from ng/L, ng/ml
+  Sed_WG[1,"PFOS"] <- (Water_WG[1, "PFOS"]/1000) / r_PFAAs[i] 
+  Sed_WG[1,"PFOA"] <- (Water_WG[1, "PFOA"]/1000) / r_PFAAs[i] 
+  Sed_WG[1,"PFNA"] <- (Water_WG[1, "PFNA"]/1000) / r_PFAAs[i] 
+
+  Sed_JBAsp[1,"PFHxS"]<-(Water_JBAsp[1, "PFHxS"]/1000) / r_PFAAs[i] 
+  Sed_JBAsp[1,"PFOS"]<-(Water_JBAsp[1, "PFOS"]/1000)/ r_PFAAs[i]
+  Sed_JBAsp[1,"PFOA"]<-(Water_JBAsp[1, "PFOA"]/1000) / r_PFAAs[i]
+  Sed_JBAsp[1,"PFNA"]<-(Water_JBAsp[1, "PFNA"]/1000)/ r_PFAAs[i] 
+
+  Sed_JBAsum[1,"PFHxS"]<-(Water_JBAsum[1, "PFHxS"]/1000) / r_PFAAs[i] 
+  Sed_JBAsum[1,"PFOS"]<-(Water_JBAsum[1, "PFOS"]/1000)/ r_PFAAs[i]
+  Sed_JBAsum[1,"PFOA"]<-(Water_JBAsum[1, "PFOA"]/1000)/ r_PFAAs[i] 
+  Sed_JBAsum[1,"PFNA"]<-(Water_JBAsum[1, "PFNA"]/1000) / r_PFAAs[i] 
+
+  WG_inputFiles_list$chemicalData["C_s", 1:6]<- Sed_WG[1, c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")]
+  WG_inputFiles_list$chemicalData["C_WTO",1:6]<-Water_WG [1, c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")]/1000
+  JBAsp_inputFiles_list$chemicalData["C_s", 1:6]<- Sed_WG[1, c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")]
+  JBAsp_inputFiles_list$chemicalData["C_WTO", 1:6]<-Water_WG [1, c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")]/1000
+  JBAsum_inputFiles_list$chemicalData["C_s", 1:6]<- Sed_WG[1, c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")]
+  JBAsum_inputFiles_list$chemicalData["C_WTO", 1:6]<-Water_WG [1, c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")]/1000
+  
+  # WG 
+  AllData_wg0<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = WG_inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = WG_inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = WG_inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = WG_inputFiles_list$max_dietData)
+
+
+  # JBA spring
+  AllData_jba_sp0<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = JBAsp_inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = JBAsp_inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = JBAsp_inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = JBAsp_inputFiles_list$max_dietData)
+
+  # JBA summer 
+  AllData_jba_sum0<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = JBAsum_inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR', "Gill_uptake",
+                                    "Dietary_uptake", "Gill_up%", "Diet_up%",
+                                    "Total Elimination", "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = JBAsum_inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  run_w_RenalElim = TRUE,
+                  food_web_calc = TRUE,
+                  min_diet_WTO_C_s = TRUE,
+                  min_dietData = JBAsum_inputFiles_list$min_dietData,
+                  max_diet_WTO_C_s = TRUE, 
+                  max_dietData = JBAsum_inputFiles_list$max_dietData)
+
+  AllData_wg0$loc<-"WG"
+  AllData_jba_sp0$loc<-"JBA sp"
+  AllData_jba_sum0$loc<-"JBA sum"
+  AllData_wg0$ratio<- r_PFAAs[i]
+  AllData_jba_sp0$ratio<- r_PFAAs[i]
+  AllData_jba_sum0$ratio<- r_PFAAs[i]
+  AllData0<-rbind(AllData_wg0, AllData_jba_sum0, AllData_jba_sp0)
+  AllData0 <- AllData0[!c(AllData0$PFAA == "PFUA" | AllData0$PFAA == "PFDA"),]
+  
+  if(i == 1 ){
+    AllData<-AllData0
+  }else{
+    AllData<-rbind(AllData, AllData0)
+  }
+  
+}
+
+AllData_sed<-AllData
+AllData_sed<-merge(AllData_sed, trophicLevels)
+AllData_sed<-merge(AllData_sed, PFAA_List)
+```
+
+```{r calcs observed data ,message = FALSE, warning  = FALSE,  fig.height = 6, fig.width = 8, fig.align = "center"}
+# whats the actual observed ratio?
+# order is for c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")
+WG_C_WTO_ng_mL <- c(0.1219425, 0.3862425, 0.03695603, 0.00372315, 0.0, 0.00) 
+WG_C_s_ng_g <- c(0.9623161, 0.2731140, 0.14765057, 11.04686791, 0.0, 0.00) # order of PFAA
+WG_ratio <- data.frame(PFAA = c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA"), ratio = WG_C_WTO_ng_mL/ WG_C_s_ng_g)
+
+# summer JBA
+JBAsum_C_WTO_ng_mL = c(1.22785,	1.1987,	0.4274,	0.0151205, 0.029,	0)
+JBAsum_C_s_ng_g = c(0.238,	0.96875,	0.13875,	0.05925,	0.029,	0)
+JBAsum_ratio <- data.frame(PFAA = c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA"), ratio =JBAsum_C_WTO_ng_mL/ JBAsum_C_s_ng_g)
+
+# spring JBA
+JBAsp_C_WTO_ng_mL = c(0.676833333,	0.705625,	0.267791667,	0.011322083,	0.029,	0)
+JBAsp_C_s_ng_g = c(0.281,	1.166857143,	0.156571429,	0.071857143,	0.029,	0)
+JBAsp_ratio <- data.frame(PFAA = c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA"), ratio = JBAsp_C_WTO_ng_mL/ JBAsp_C_s_ng_g)
+
+
+
+```
+
+```{r sequence sediment plots ,message = FALSE, warning  = FALSE,  fig.height = 6, fig.width = 8, fig.align = "center"}
+p_sed1<-ggplot(AllData_sed[!c(AllData_sed$SppAlias == "Phy"),],
+       aes(y=`Diet_up%`*100, x = C_s,
+           group = interaction(loc, SppAlias, PFAA),
+           color = PFAA))+
+  # geom_point(size = 0.5)+
+  facet_grid(.~PFAA, scales = "free")+
+  scale_color_manual(values = PFAA_cols)+
+  scale_linetype_manual(values = c("dashed", "dotted", "solid"))+
+  ylim(0,100)+
+  geom_line(size= 0.5)+
+  theme_bw()
+ggformat(p_sed1, x_title = ("PFAA in sediment (ng/g)"), y_title = ("PFAA dietary uptake (%)"))
+
+
+p_sed2<-ggplot(AllData_sed[!c(AllData_sed$SppAlias == "Phy"),],
+       aes(y=`Diet_up%`*100, x = ratio,
+           group = interaction(loc, SppAlias, PFAA),
+           color = PFAA))+
+  # geom_point(size = 0.5)+
+  # facet_grid(.~PFAA)+
+  # geom_point()+
+  geom_hline(yintercept = 0, color = "grey", linetype = "dashed")+
+  geom_point(data = JBAsp_ratio,
+             mapping = aes(x = ratio, y = -3,
+                           group = NULL, 
+                           color = PFAA),
+             pch = 19, size = 3)+
+  geom_point(data = WG_ratio,
+           mapping = aes(x = ratio, y = -3,
+                         group = NULL, 
+                         color = PFAA),
+           pch = 23, size = 3)+
+  geom_point(data = JBAsum_ratio,
+           mapping = aes(x = ratio, y = -3,
+                         group = NULL, 
+                         color = PFAA),
+           pch = 21, size = 3)+
+  scale_color_manual(values = PFAA_cols)+
+  # scale_linetype_manual(values = c("dashed", "dotted", "solid"))+
+  ylim(-7,100)+
+  xlim(0,1)+
+  geom_line(size= 0.5, alpha = 0.5)+
+  theme_bw()
+ ggformat(p_sed2, x_title = ("PFAS in water:sediment ratio (ng/mL: ng/g)"), y_title = ("PFAS dietary uptake (%)"))
+
+ggsave(filename = "../Figures/fig5_sedRatio_oct31.png", p_sed2, width = 6, height = 5)
+
+```
+
+**Figure 6** The uptake from diet (%) based on the PFAA in sediment
+**Figure 7** The Uptake from diet based on the PFAA water:sediment ratio
+
+Animals with more sediment uptake (through indirect and direct routes) will...
+
+```{r sed and sediment connections}
+
+# JBA summer
+jba_sum_sedtrophic_data<-data.frame(
+  SppAlias = c("Phy", "Dac", "Dar", "Min", "Fal", "Bas", "Mad", "Pum", "Swa"), 
+  Sed_trophic = c(0,0.5,0.2,0.45,0.34,0.16,0.5,0.21,0.5), loc = c("JBA sum"))
+
+jba_sp_sedtrophic_data<-data.frame(
+  SppAlias = c("Phy", "Kil", "Chu", "Dac", "Dar", "Mid", "Mad", "Pum", "Swa"), 
+  Sed_trophic = c(0,0.1,0.25,0.5,0.24,0.45,0.5,0.22,0.5), loc = c("JBA sp"))
+
+wg_sedtrophic_data<-data.frame(
+  SppAlias = c("Phy", "Pry", "Bgl", "Bas"), 
+  Sed_trophic = c(0,0.3, 0.42,0.18), loc = c("WG"))
+
+AllData_sediment<-merge(AllData_sed,
+      rbind(jba_sum_sedtrophic_data, jba_sp_sedtrophic_data, wg_sedtrophic_data),
+      by = c("SppAlias", "loc"))
+
+```
+
+```{r Diet % and total tissue PFAA, eval = FALSE}
+
+
+ggplot(data = AllData_sediment[c(!AllData_sediment$SppAlias =="Phy" & AllData_sediment$loc == "JBA sum"),],
+       aes(alpha = `Diet_up%`,
+           y = log_ngkg_re,
+           color = PFAA, x = ratio, 
+           group  = interaction(PFAA, SppAlias, loc)))+
+  geom_smooth(size = 0.05, se = F)+
+  geom_point(pch=19)+
+  scale_color_manual(values = PFAA_cols)
+
+ggplot(data = AllData_sediment[c(!AllData_sediment$SppAlias =="Phy" & AllData_sediment$loc == "JBA sum"),],
+       aes(alpha = `Diet_up%`,
+           y = log_ngkg_re,
+           color = PFAA, x = ratio, 
+           group  = interaction(PFAA, SppAlias)))+
+  geom_smooth(size = 0.05, se = F)+
+  geom_point(pch=19)+
+  scale_color_manual(values = PFAA_cols)
+
+
+pdiet_water2<-ggplot(data = AllData_sediment[c(!AllData_sediment$SppAlias =="Phy" & AllData_sediment$loc == "JBA sum"),],
+       aes(x = `Diet_up%`, y = log_ngkg_re, 
+                           color = PFAA, alpha = ratio, 
+           group  = interaction(PFAA, SppAlias, loc)))+
+  geom_smooth(size = 0.05, se = F)+
+  geom_point(pch=19)+
+  scale_color_manual(values = PFAA_cols)
+
+ggformat(pdiet_water2, x_title = ("Dietary uptake (% total)"), y_title = ("Modeled log PFAS (ng/kg)"), size_text = 12)
+
+ggsave(filename = "../Figures/fig5_sedWater_accumulati_oct31.png", pdiet_water2, width = 5, height = 4)
+
+
+```
+
+```{r sediment trophic location and PFAA upatake - saved}
+p_sed3<-ggplot(AllData_sediment[!c(AllData_sediment$SppAlias == "Phy"),],
+               aes(y = `Diet_up%`*100, x = Sed_trophic ,
+                   color = PFAA, group = interaction(PFAA),
+                   shape = loc))+
+  geom_point()+
+  # geom_smooth(method = "lm", formula=y ~ poly(x, 2, raw=TRUE))+
+  scale_color_manual(values = PFAA_cols)
+ggformat(p_sed3, y_title = 'Diet % contribution', x_title = "Sediment in diet (fraction)")
+p_sed3<-p_sed3+ theme(legend.position = "none")
+
+
+p_sed4<-ggplot(AllData_sediment[!c(AllData_sediment$SppAlias == "Phy") & 
+                                  AllData_sediment$ratio == 0.01,],
+               aes(y = log_ngkg_re, x = Sed_trophic,
+                   color = PFAA, group = interaction(PFAA),
+                   shape = loc))+
+  scale_shape_manual(values = c(19, 21, 23))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  scale_color_manual(values = PFAA_cols)
+
+ggplot(AllData_sediment[!c(AllData_sediment$SppAlias == "Phy") & 
+                                  AllData_sediment$ratio == 1,],
+               aes(y = `Diet_up%`, x = Sed_trophic,
+                   color = PFAA, group = interaction(PFAA, loc),
+                   shape = loc))+
+  scale_shape_manual(values = c(19, 21, 23))+
+  geom_point()+
+  geom_smooth(method = "lm", se= F)+
+  scale_color_manual(values = PFAA_cols)
+
+ggformat(p_sed4, y_title = 'Modeled log PFAA (ng/kg)', x_title = "Sediment in diet (fraction)")
+p_sed4<-p_sed4+ theme(legend.position = "none")
+ggsave(filename = "../Figures/fig3_sed_oct31.png", plot = p_sed4, height = 4, width = 4)
+
+```
+
+```{r, eval = FALSE}
+
+ggplot(AllData_sediment[!c(AllData_sediment$SppAlias == "Phy"),],
+               aes(y = Obs_logngkg, x = Sed_trophic,
+                   color = PFAA, group = interaction(PFAA),
+                   shape = loc))+
+  scale_shape_manual(values = c(19, 21, 23))+
+  geom_point()+
+  facet_grid(.~loc)+
+  geom_smooth(method = "lm")+
+  scale_color_manual(values = PFAA_cols)
+
+```
+
+```{r, eval = FALSE}
+p_sed5<-ggplot(AllData_sediment[!c(AllData_sediment$SppAlias == "Phy"),],
+       aes(y = log_ngkg_re, x = trophicLevel,
+       color = PFAA,
+       group = interaction(PFAA),
+       shape = loc))+
+  geom_point()+
+  scale_shape_manual(values = c(19, 21, 23))+
+  geom_smooth(method = "lm")+ #, formula=y ~ poly(x, 2, raw=TRUE))+
+  scale_color_manual(values = PFAA_cols)
+
+# ggplot(AllData_sediment[!c(AllData_sediment$SppAlias == "Phy"),],
+#        aes(y = Sed_trophic, x = trophicLevel,
+#        color = PFAA,
+#        group = interaction(PFAA),
+#        shape = loc))+
+#   geom_point()+
+#   geom_smooth(method = "lm")+ #, formula=y ~ poly(x, 2, raw=TRUE))+
+#   scale_color_manual(values = PFAA_cols)
+
+
+
+```
+
+```{r trophic level and the effect on the diet, fig.height = 6, fig.width = 8, fig.align = "center", eval = FALSE}
+
+ggplot(AllData_sed[AllData_sed$ratio < 1, ], aes(y=`Diet_up%`*100, x = trophicLevel, 
+                                                 group = ratio, color = ratio))+
+  geom_point(size = 0.5)+
+  facet_grid(loc~PFAA, scales = "free")+
+  # scale_color_viridis_d()+
+  ylim(0,100)+
+  geom_line()+
+  theme_bw()+
+  xlab("trophic level")+
+  ylab("PFAA dietary uptake (%)")
+# ggsave(filename = "./Figures/poster_sediment_PFOS_bioaccum_JBAsummer.png", width = 5, height = 5)
+
+
+# ggplot(AllData_sed[AllData_sed$ratio < 2 & !AllData_sed$loc == "WG", ], aes(y=`Diet_up%`*100, x = WB, group = ratio, color = ratio))+
+#   geom_point(size = 0.5)+
+#   facet_grid(loc~PFAA, scales = "free")+
+#   # scale_color_viridis_d()+
+#   ylim(0,100)+
+#   geom_line()+
+#   theme_bw()+
+#   xlab("Body mass (kg)")+
+#   ylab("PFAA dietary uptake (%)")
+# # ggsave(filename = "./Figures/poster_sediment_PFOS_bioaccum_JBAsummer.png", width = 5, height = 5)
+
+
+
+```
+ 
+ **Figure 8** No obvious relationship between trophic level (fishbase.org or from Abbi's data) and PFAS uptake via diet.
+
+```{r chain length and the effect on diet, fig.height = 6, fig.width = 8, fig.align = "center", eval = FALSE}
+
+PFAA_List <- data.frame(PFAA = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'), PFAA_labels = c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA','C11 PFCA'), PFAA_n = c(6,8,8,9,10,11))
+
+AllData_sed<-merge(AllData_sed, PFAA_List, by = "PFAA")
+AllData_sed$PFAA_labels<-factor(AllData_sed$PFAA_labels)
+AllData_sed$PFAA_labels<-factor(AllData_sed$PFAA_labels, levels = c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA'))
+
+ggplot(AllData_sed[AllData_sed$ratio < 1, ],
+       aes(y=`Diet_up%`*100, x = PFAA_labels,
+           group = SppAlias, 
+           color = PFAA))+
+  geom_point(size = 0.5)+
+  scale_color_manual(values = PFAA_labels)+
+  # geom_line(linewidth = 0.5)+
+  ylim(0,100)+
+  theme_bw()+
+  xlab("PFAA chain length")+
+  ylab("PFAA dietary uptake (%)")+
+  theme(axis.text.x = element_text(angle = 45))
+
+
+```
+
+
+**Figure 9** The relationship between chain length and type of PFAA and PFAA dietary uptake
+
+```{r Sed_trophic and error rates, eval = FALSE}
+
+ggplot(AllData_sediment,
+       aes(y=`Diet_up%`*100, x = PFAA_labels,
+           group = SppAlias, 
+           color = PFAA))+
+  geom_point(size = 0.5)+
+  scale_color_manual(values = PFAA_labels)+
+  # geom_line(linewidth = 0.5)+
+  ylim(0,100)+
+  theme_bw()+
+  xlab("PFAA chain length")+
+  ylab("PFAA dietary uptake (%)")+
+  theme(axis.text.x = element_text(angle = 45))
+
+```
+
+
+
+
+
+
