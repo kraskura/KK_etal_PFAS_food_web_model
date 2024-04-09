@@ -1,46 +1,25 @@
-# loop without RE and with RE: output MEDIAN (0) RESULTS  
-PFAA_loop <- function(settings,
-                     inputFiles_list,
-                     parameterList,
-                     PFAA_List){
 
-    for (i in 1:length(PFAA_List)){
-        PFAA<-PFAA_List[[i]]
-        # TissueConc <- BioaccumulationModel(PFAA = PFAA, settings_dict = settings, **inputFiles_list)
-        TissueConc_re <- BioaccumulationModel(
-                          PFAA = PFAA,
-                          numSpecies = inputFiles_list$numSpecies,
-                          oceanData = inputFiles_list$oceanData,
-                          chemicalData = inputFiles_list$chemicalData,
-                          chemicalParams = inputFiles_list$chemicalParams,
-                          organismData = inputFiles_list$organismData,
-                          foodWebData = inputFiles_list$foodWebData,
-                          settings = settings,
-                          dietData = inputFiles_list$dietData,
-                          kRTable = inputFiles_list$kRTable)
-          temp_table_re <- TissueConc_re[parameterList]
-          temp_table_re$PFAA <- PFAA
-          if(i == 1){
-            ResultTable_re <- temp_table_re
-          } else {
-            ResultTable_re<-rbind(ResultTable_re, temp_table_re)
-          }
-    }
-  
-    ResultTable_re$SppAlias <- rownames(ResultTable_re)
-    rownames(ResultTable_re) <- 1:nrow(ResultTable_re)
-    names(ResultTable_re)[names(ResultTable_re) == 'C_B'] <- 'C_B_re' # ng/kg
-    ResultTable_re$log_ngkg_re <- log10(ResultTable_re$C_B_re)
-    ResultTable_re$log_BAF_re <- log10(ResultTable_re$C_B_re / (ResultTable_re$C_WTO*1000))
-    
-    ResultTable_re$SppAlias <- substr(ResultTable_re$SppAlias, start = 1, stop =3)
-    ResultTable_re<-ResultTable_re[, c("SppAlias", "PFAA" ,"C_B_re", parameterList[2:length(parameterList)],  "log_BAF_re", "log_ngkg_re")]
-  
-    AllResults<-ResultTable_re
-    return(AllResults)
-  
-}
-
+#' Title: A function that facilitates a complete model run for a given system.
+#' The function estimates PFAS bioconcentration for each species and each PFAA. 
+#' The estimation sequence generally follows the order: 
+#'
+#' @param settings 
+#' @param inputFiles_list 
+#' @param PFAA_List 
+#' @param kRTable 
+#' @param dietData 
+#' @param parameterList 
+#' @param min_diet_WTO_C_s 
+#' @param max_diet_WTO_C_s 
+#' @param min_dietData 
+#' @param max_dietData 
+#' @param RunID 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' 
 runEcosystemModel <- function(settings,
                               inputFiles_list, 
                               PFAA_List,
@@ -51,46 +30,58 @@ runEcosystemModel <- function(settings,
                               max_diet_WTO_C_s = FALSE, 
                               min_dietData = NULL, 
                               max_dietData = NULL, 
-                              observedData_BCF_BMF = NULL,
-                              env_temperature = NULL, # only works for food web full model
-                              env_pH = NULL,
-                              env_DO = NULL,
-                              env_Cs = NULL, # as many PFAS as in the dataset
-                              env_WTO = NULL, # as many PFAS as in the dataset
-                              org_mass = NULL, # as many fish as in the dataset 
-                              RunID = "default",
-                              random_temp = FALSE,
-                              random_DO = FALSE
-                              ){ # for BCF_calc or BMF_calc = TRUE){ 
+                              RunID = "default"
+                              ){ 
   
-  # food web calc = TRUE ----
 
+  # nested function to loop through each PFAA
+  # loop without RE and with RE: output MEDIAN (0) RESULTS  
+  PFAA_loop <- function(settings,
+                       inputFiles_list,
+                       parameterList,
+                       PFAA_List){
+  
+      for (i in 1:length(PFAA_List)){
+          PFAA<-PFAA_List[[i]]
+          # TissueConc <- BioaccumulationModel(PFAA = PFAA, settings_dict = settings, **inputFiles_list)
+          TissueConc_re <- BioaccumulationModel(
+                            PFAA = PFAA,
+                            numSpecies = inputFiles_list$numSpecies,
+                            oceanData = inputFiles_list$oceanData,
+                            chemicalData = inputFiles_list$chemicalData,
+                            chemicalParams = inputFiles_list$chemicalParams,
+                            organismData = inputFiles_list$organismData,
+                            foodWebData = inputFiles_list$foodWebData,
+                            settings = settings,
+                            dietData = inputFiles_list$dietData,
+                            kRTable = inputFiles_list$kRTable)
+            temp_table_re <- TissueConc_re[parameterList]
+            temp_table_re$PFAA <- PFAA
+            if(i == 1){
+              ResultTable_re <- temp_table_re
+            } else {
+              ResultTable_re<-rbind(ResultTable_re, temp_table_re)
+            }
+      }
+    
+      ResultTable_re$SppAlias <- rownames(ResultTable_re)
+      rownames(ResultTable_re) <- 1:nrow(ResultTable_re)
+      names(ResultTable_re)[names(ResultTable_re) == 'C_B'] <- 'C_B_re' # ng/kg
+      ResultTable_re$log_ngkg_re <- log10(ResultTable_re$C_B_re)
+      ResultTable_re$log_BAF_re <- log10(ResultTable_re$C_B_re / (ResultTable_re$C_WTO*1000))
+      
+      ResultTable_re$SppAlias <- substr(ResultTable_re$SppAlias, start = 1, stop =3)
+      ResultTable_re<-ResultTable_re[, c("SppAlias", "PFAA" ,"C_B_re", parameterList[2:length(parameterList)],  "log_BAF_re", "log_ngkg_re")]
+    
+      AllResults<-ResultTable_re
+      return(AllResults)
+    
+  }
 
+  # food web calc = TRUE -----
+  
   inputFiles_list$dietData <- dietData
   inputFiles_list$kRTable <- kRTable
-  
-  if(!is.null(org_mass)){
-    for(i in 1:length(org_mass)){
-      inputFiles_list$organismData[1,i+1] <- org_mass[i]
-    }
-  }
-
-  if(!is.null(env_temperature)){
-    inputFiles_list$oceanData["T", 1] <- env_temperature
-  }
-  if(!is.null(env_pH)){
-    inputFiles_list$oceanData["pH", 1] <- env_pH
-  }
-  if(!is.null(env_DO)){
-    inputFiles_list$oceanData["C_OX", 1] <- env_DO
-  }
-  
-  if(!is.null(env_WTO)){
-    inputFiles_list$chemicalData["C_WTO", 2:(length(env_WTO)+1)] <- env_WTO
-  }
-  if(!is.null(env_Cs)){
-    inputFiles_list$chemicalData["C_s", 2:(length(env_Cs)+1)] <- env_Cs
-  }
 
   run0<-PFAA_loop(settings,
                  inputFiles_list,
@@ -108,6 +99,8 @@ runEcosystemModel <- function(settings,
     }
     
     inputFiles_list$dietData <- max_dietData
+    
+    # run PFAA loop with all max values 
     run.MAX<-PFAA_loop(settings,
                        inputFiles_list,
                        parameterList,
@@ -120,6 +113,7 @@ runEcosystemModel <- function(settings,
     names(run0.MAXfull)[names(run0.MAXfull) == 'C_B_re'] <- 'C_B_re_max'
     names(run0.MAXfull)[names(run0.MAXfull) == 'Gill_uptake'] <- 'Gill_uptake_max'
     names(run0.MAXfull)[names(run0.MAXfull) == 'Dietary_uptake'] <- 'Dietary_uptake_max'
+    names(run0.MAXfull)[names(run0.MAXfull) == 'Sediment_uptake'] <- 'Sediment_uptake_max'
     names(run0.MAXfull)[names(run0.MAXfull) == "log_BAF_re"] <- 'log_BAF_re_max'
   }
   
@@ -134,6 +128,7 @@ runEcosystemModel <- function(settings,
 
     inputFiles_list$dietData <- min_dietData
 
+    # run PFAA loop with all min values
     run.MIN<-PFAA_loop(settings,
                        inputFiles_list,
                        parameterList,
@@ -146,12 +141,13 @@ runEcosystemModel <- function(settings,
     names(run0.MINfull)[names(run0.MINfull) == 'C_B_re'] <- 'C_B_re_min'
     names(run0.MINfull)[names(run0.MINfull) == 'Gill_uptake'] <- 'Gill_uptake_min'
     names(run0.MINfull)[names(run0.MINfull) == 'Dietary_uptake'] <- 'Dietary_uptake_min'
+    names(run0.MINfull)[names(run0.MINfull) == 'Sediment_uptake'] <- 'Sediment_uptake_min'
     names(run0.MINfull)[names(run0.MINfull) == "log_BAF_re"] <- 'log_BAF_re_min'
   }
   
   # reset the median, mean and max values and names in the dataset
   if(!is.null(min_dietData) && !is.null(max_dietData)){
-    if(max_diet_WTO_C_s & min_diet_WTO_C_s){
+  if(max_diet_WTO_C_s & min_diet_WTO_C_s){
       # reset chemicalData
       chemicalData <- inputFiles_list$chemicalData
       rownames(chemicalData) <- c("C_WTO", "C_WTO_max", "C_WTO_min",
@@ -159,9 +155,9 @@ runEcosystemModel <- function(settings,
       inputFiles_list$chemicalData <- chemicalData        
     }
     
-    run0.full<-run0.full[ , !(names(run0.full) %in% c("Total Elimination.1"))]
-    run0.MAXfull<-run0.MAXfull[ , !(names(run0.MAXfull) %in% c("Total Elimination.1"))]
-    run0.MINfull<-run0.MINfull[ , !(names(run0.MINfull) %in% c("Total Elimination.1"))]
+    # run0.full<-run0.full[ , !(names(run0.full) %in% c("Total Elimination.1"))]
+    # run0.MAXfull<-run0.MAXfull[ , !(names(run0.MAXfull) %in% c("Total Elimination.1"))]
+    # run0.MINfull<-run0.MINfull[ , !(names(run0.MINfull) %in% c("Total Elimination.1"))]
 
     
     run0.MAX.MIN <- merge(run0.MAXfull, run0.MINfull, by=c('SppAlias','PFAA',
@@ -175,6 +171,7 @@ runEcosystemModel <- function(settings,
                                                    "G_V", "G_D",
                                                    "Total Elimination"))
 
+    # diff in PFAA uptake from max/min to median diets 
     Modeled$logngkg_re_Up <- Modeled$log_ngkg_re_max - Modeled$log_ngkg_re
     Modeled$logngkg_re_Lo <- Modeled$log_ngkg_re - Modeled$log_ngkg_re_min
       

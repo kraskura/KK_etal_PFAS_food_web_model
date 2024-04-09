@@ -1,7 +1,63 @@
 
-
-# create and visualize bioaccumulation data tables, include metabolism
-
+#' Title: function to create and visualize bioaccumulation data tables, includes metabolism
+#' Use:
+#' 
+#' @param species 
+#' @param group_species 
+#' @param WB_kg 
+#' @param foodWeb 
+#' @param diet 
+#' @param C_WTO_ng_mL 
+#' @param C_s_ng_g 
+#' @param C_OX 
+#' @param min_diet 
+#' @param max_diet 
+#' @param MMR 
+#' @param RMR 
+#' @param pct_FeedRate 
+#' @param m_O 
+#' @param nu_NB 
+#' @param nu_LB 
+#' @param nu_PB 
+#' @param nu_OB 
+#' @param nu_WB 
+#' @param epsilon_N 
+#' @param epsilon_L 
+#' @param epsilon_P 
+#' @param epsilon_O 
+#' @param epsilon_W 
+#' @param A 
+#' @param B 
+#' @param GRF 
+#' @param scaling_exp 
+#' @param feeding_exp 
+#' @param P_B 
+#' @param C_WTO_max_ng_mL 
+#' @param C_WTO_min_ng_mL 
+#' @param C_s_max_ng_g 
+#' @param C_s_min_ng_g 
+#' @param Phi_exp_chem 
+#' @param OCS 
+#' @param delta_OCS 
+#' @param pH 
+#' @param Phi_exp_ocean 
+#' @param C_SS 
+#' @param PFAA 
+#' @param chemID 
+#' @param Log_Kow 
+#' @param pKa 
+#' @param log_Kpw 
+#' @param log_Dmw 
+#' @param E_D 
+#' @param E_W 
+#' @param log_Koc 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' 
+#' 
 create_data_tables<-function(
     species, 
     group_species, # inv, fish, plant
@@ -393,14 +449,14 @@ create_data_tables<-function(
   }
   if(is.null(C_WTO_min_ng_mL)){
     C_WTO_min_ng_mL <- C_WTO_ng_mL * 0.9 # 10 % lower
-    message("min and max PFAS in water: 10 % +/- water PFAS")
+    message("No min and max PFAS in water constructing data tables: assigning 10 % +/- water PFAS")
   }
   if(is.null(C_s_max_ng_g)){
     C_s_max_ng_g <- C_s_ng_g * 1.1 # 10 % higher 
   }
   if(is.null(C_s_min_ng_g)){
     C_s_min_ng_g <- C_s_ng_g * 0.9 # 10 % lower
-    message("min and max PFAS in sediment: 10 % +/- sediment PFAS")
+    message("No min and max PFAS in sediment constructing data tables: assigning 10 % +/- water PFAS")
   }
   
 

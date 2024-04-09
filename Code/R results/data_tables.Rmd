@@ -26,15 +26,15 @@ knitr::opts_chunk$set(echo = TRUE)
 library(gridExtra)
 library(kableExtra)
 library(here)
-here::set_here(path = "../../")
+# here::set_here(path = "../../")
 
-source("../R model/data_tables.R")
+source(here("Code/R model/data_tables.R"))
 
-source("../../Code/R data tables/WG.R")
+source(here("Code/R data tables/WG.R"))
 data.wg<-inputFiles_list
-source("../../Code/R data tables/JBA_spring.R")
+source(here("Code/R data tables/JBA_spring.R"))
 data.jba.sp<-inputFiles_list
-source("../../Code/R data tables/JBA_summer.R")
+source(here("Code/R data tables/JBA_summer.R"))
 data.jba.sum<-inputFiles_list
 
 ```

@@ -105,33 +105,39 @@ d.sed<-d.sed%>%
 
 # order for PFAA is c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")
 inputFiles_list<-create_data_tables(
-  species = c("Phy",	"Dac",	"Dar",	"Min",	"Fal",	"Bas",	"Mad",	"Pum",	"Swa"), 
+  species = c("Phy",	"Bas",	"Swa",	"Dac",	"Min",	"Fal",	"Mad",	"Dar",	"Pum"), 
   group_species = c("plant", "fish", "fish", "fish", "fish", "fish", "fish", "fish", "fish"), 
   WB_kg = unlist(c(NA, 
-            d.fish.w[d.fish.w$Sp == "Dac", "mean_mass"]/1000, # in kg
-            d.fish.w[d.fish.w$Sp == "Dar", "mean_mass"]/1000,
+            d.fish.w[d.fish.w$Sp == "Bas", "mean_mass"]/1000,
+            d.fish.w[d.fish.w$Sp == "Swa", "mean_mass"]/1000, # in kg
+            d.fish.w[d.fish.w$Sp == "Dac", "mean_mass"]/1000,
             d.fish.w[d.fish.w$Sp == "Min", "mean_mass"]/1000,
             d.fish.w[d.fish.w$Sp == "Fal", "mean_mass"]/1000,
-            d.fish.w[d.fish.w$Sp == "Bas", "mean_mass"]/1000,
             d.fish.w[d.fish.w$Sp == "Mad", "mean_mass"]/1000,
-            d.fish.w[d.fish.w$Sp == "Pum", "mean_mass"]/1000,
-            d.fish.w[d.fish.w$Sp == "Swa", "mean_mass"]/1000)), 
+            d.fish.w[d.fish.w$Sp == "Dar", "mean_mass"]/1000,
+            d.fish.w[d.fish.w$Sp == "Pum", "mean_mass"]/1000)), 
   m_O = c(1, 1, 1, 1, 1, 1, 1, 1, 1),
   GRF = c(0.8, 0.00150, 0.00150, 0.00150, 0.00150, 0.00150, 0.00150, 0.00150, 0.00150),
   P_B = c(0.5, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15), 
   diet = list(
+    Bas	= unlist(c(d.fish[d.fish$Sp == "Bas", "PFHxS.m"], # in ng/g
+            d.fish[d.fish$Sp == "Bas", "PFOS.m"],
+            d.fish[d.fish$Sp == "Bas", "PFOA.m"],
+            d.fish[d.fish$Sp == "Bas", "PFNA.m"],
+            d.fish[d.fish$Sp == "Bas", "PFDA.m"],
+            d.fish[d.fish$Sp == "Bas", "PFUA.m"])), 
+    Swa	= unlist(c(d.fish[d.fish$Sp == "Swa", "PFHxS.m"], # in ng/g
+            d.fish[d.fish$Sp == "Swa", "PFOS.m"],
+            d.fish[d.fish$Sp == "Swa", "PFOA.m"],
+            d.fish[d.fish$Sp == "Swa", "PFNA.m"],
+            d.fish[d.fish$Sp == "Swa", "PFDA.m"],
+            d.fish[d.fish$Sp == "Swa", "PFUA.m"])),
     Dac	= unlist(c(d.fish[d.fish$Sp == "Dac", "PFHxS.m"], # in ng/g
             d.fish[d.fish$Sp == "Dac", "PFOS.m"],
             d.fish[d.fish$Sp == "Dac", "PFOA.m"],
             d.fish[d.fish$Sp == "Dac", "PFNA.m"],
             d.fish[d.fish$Sp == "Dac", "PFDA.m"],
             d.fish[d.fish$Sp == "Dac", "PFUA.m"])),
-    Dar	= unlist(c(d.fish[d.fish$Sp == "Dar", "PFHxS.m"], # in ng/g
-            d.fish[d.fish$Sp == "Dar", "PFOS.m"],
-            d.fish[d.fish$Sp == "Dar", "PFOA.m"],
-            d.fish[d.fish$Sp == "Dar", "PFNA.m"],
-            d.fish[d.fish$Sp == "Dar", "PFDA.m"],
-            d.fish[d.fish$Sp == "Dar", "PFUA.m"])), # same
     Min	= unlist(c(d.fish[d.fish$Sp == "Min", "PFHxS.m"], # in ng/g
             d.fish[d.fish$Sp == "Min", "PFOS.m"],
             d.fish[d.fish$Sp == "Min", "PFOA.m"],
@@ -144,44 +150,44 @@ inputFiles_list<-create_data_tables(
             d.fish[d.fish$Sp == "Fal", "PFNA.m"],
             d.fish[d.fish$Sp == "Fal", "PFDA.m"],
             d.fish[d.fish$Sp == "Fal", "PFUA.m"])),
-    Bas	= unlist(c(d.fish[d.fish$Sp == "Bas", "PFHxS.m"], # in ng/g
-            d.fish[d.fish$Sp == "Bas", "PFOS.m"],
-            d.fish[d.fish$Sp == "Bas", "PFOA.m"],
-            d.fish[d.fish$Sp == "Bas", "PFNA.m"],
-            d.fish[d.fish$Sp == "Bas", "PFDA.m"],
-            d.fish[d.fish$Sp == "Bas", "PFUA.m"])), 
     Mad	= unlist(c(d.fish[d.fish$Sp == "Mad", "PFHxS.m"], # in ng/g
             d.fish[d.fish$Sp == "Mad", "PFOS.m"],
             d.fish[d.fish$Sp == "Mad", "PFOA.m"],
             d.fish[d.fish$Sp == "Mad", "PFNA.m"],
             d.fish[d.fish$Sp == "Mad", "PFDA.m"],
             d.fish[d.fish$Sp == "Mad", "PFUA.m"])),
+    Dar	= unlist(c(d.fish[d.fish$Sp == "Dar", "PFHxS.m"], # in ng/g
+            d.fish[d.fish$Sp == "Dar", "PFOS.m"],
+            d.fish[d.fish$Sp == "Dar", "PFOA.m"],
+            d.fish[d.fish$Sp == "Dar", "PFNA.m"],
+            d.fish[d.fish$Sp == "Dar", "PFDA.m"],
+            d.fish[d.fish$Sp == "Dar", "PFUA.m"])), # same
     Pum	= unlist(c(d.fish[d.fish$Sp == "Pum", "PFHxS.m"], # in ng/g
             d.fish[d.fish$Sp == "Pum", "PFOS.m"],
             d.fish[d.fish$Sp == "Pum", "PFOA.m"],
             d.fish[d.fish$Sp == "Pum", "PFNA.m"],
             d.fish[d.fish$Sp == "Pum", "PFDA.m"],
-            d.fish[d.fish$Sp == "Pum", "PFUA.m"])),
-    Swa	= unlist(c(d.fish[d.fish$Sp == "Swa", "PFHxS.m"], # in ng/g
-            d.fish[d.fish$Sp == "Swa", "PFOS.m"],
-            d.fish[d.fish$Sp == "Swa", "PFOA.m"],
-            d.fish[d.fish$Sp == "Swa", "PFNA.m"],
-            d.fish[d.fish$Sp == "Swa", "PFDA.m"],
-            d.fish[d.fish$Sp == "Swa", "PFUA.m"])
-      )),
+            d.fish[d.fish$Sp == "Pum", "PFUA.m"]))
+      ),
   min_diet = list(
+    Bas	= unlist(c(d.fish[d.fish$Sp == "Bas", "PFHxS.min"], # in ng/g
+            d.fish[d.fish$Sp == "Bas", "PFOS.min"],
+            d.fish[d.fish$Sp == "Bas", "PFOA.min"],
+            d.fish[d.fish$Sp == "Bas", "PFNA.min"],
+            d.fish[d.fish$Sp == "Bas", "PFDA.min"],
+            d.fish[d.fish$Sp == "Bas", "PFUA.min"])), 
+    Swa	= unlist(c(d.fish[d.fish$Sp == "Swa", "PFHxS.min"], # in ng/g
+            d.fish[d.fish$Sp == "Swa", "PFOS.min"],
+            d.fish[d.fish$Sp == "Swa", "PFOA.min"],
+            d.fish[d.fish$Sp == "Swa", "PFNA.min"],
+            d.fish[d.fish$Sp == "Swa", "PFDA.min"],
+            d.fish[d.fish$Sp == "Swa", "PFUA.min"])),
     Dac	= unlist(c(d.fish[d.fish$Sp == "Dac", "PFHxS.min"], # in ng/g
             d.fish[d.fish$Sp == "Dac", "PFOS.min"],
             d.fish[d.fish$Sp == "Dac", "PFOA.min"],
             d.fish[d.fish$Sp == "Dac", "PFNA.min"],
             d.fish[d.fish$Sp == "Dac", "PFDA.min"],
             d.fish[d.fish$Sp == "Dac", "PFUA.min"])),
-    Dar	= unlist(c(d.fish[d.fish$Sp == "Dar", "PFHxS.min"], # in ng/g
-            d.fish[d.fish$Sp == "Dar", "PFOS.min"],
-            d.fish[d.fish$Sp == "Dar", "PFOA.min"],
-            d.fish[d.fish$Sp == "Dar", "PFNA.min"],
-            d.fish[d.fish$Sp == "Dar", "PFDA.min"],
-            d.fish[d.fish$Sp == "Dar", "PFUA.min"])), # same
     Min	= unlist(c(d.fish[d.fish$Sp == "Min", "PFHxS.min"], # in ng/g
             d.fish[d.fish$Sp == "Min", "PFOS.min"],
             d.fish[d.fish$Sp == "Min", "PFOA.min"],
@@ -194,44 +200,43 @@ inputFiles_list<-create_data_tables(
             d.fish[d.fish$Sp == "Fal", "PFNA.min"],
             d.fish[d.fish$Sp == "Fal", "PFDA.min"],
             d.fish[d.fish$Sp == "Fal", "PFUA.min"])),
-    Bas	= unlist(c(d.fish[d.fish$Sp == "Bas", "PFHxS.min"], # in ng/g
-            d.fish[d.fish$Sp == "Bas", "PFOS.min"],
-            d.fish[d.fish$Sp == "Bas", "PFOA.min"],
-            d.fish[d.fish$Sp == "Bas", "PFNA.min"],
-            d.fish[d.fish$Sp == "Bas", "PFDA.min"],
-            d.fish[d.fish$Sp == "Bas", "PFUA.min"])), 
     Mad	= unlist(c(d.fish[d.fish$Sp == "Mad", "PFHxS.min"], # in ng/g
             d.fish[d.fish$Sp == "Mad", "PFOS.min"],
             d.fish[d.fish$Sp == "Mad", "PFOA.min"],
             d.fish[d.fish$Sp == "Mad", "PFNA.min"],
             d.fish[d.fish$Sp == "Mad", "PFDA.min"],
             d.fish[d.fish$Sp == "Mad", "PFUA.min"])),
+    Dar	= unlist(c(d.fish[d.fish$Sp == "Dar", "PFHxS.min"], # in ng/g
+            d.fish[d.fish$Sp == "Dar", "PFOS.min"],
+            d.fish[d.fish$Sp == "Dar", "PFOA.min"],
+            d.fish[d.fish$Sp == "Dar", "PFNA.min"],
+            d.fish[d.fish$Sp == "Dar", "PFDA.min"],
+            d.fish[d.fish$Sp == "Dar", "PFUA.min"])), # same
     Pum	= unlist(c(d.fish[d.fish$Sp == "Pum", "PFHxS.min"], # in ng/g
             d.fish[d.fish$Sp == "Pum", "PFOS.min"],
             d.fish[d.fish$Sp == "Pum", "PFOA.min"],
             d.fish[d.fish$Sp == "Pum", "PFNA.min"],
             d.fish[d.fish$Sp == "Pum", "PFDA.min"],
-            d.fish[d.fish$Sp == "Pum", "PFUA.min"])),
-    Swa	= unlist(c(d.fish[d.fish$Sp == "Swa", "PFHxS.min"], # in ng/g
-            d.fish[d.fish$Sp == "Swa", "PFOS.min"],
-            d.fish[d.fish$Sp == "Swa", "PFOA.min"],
-            d.fish[d.fish$Sp == "Swa", "PFNA.min"],
-            d.fish[d.fish$Sp == "Swa", "PFDA.min"],
-            d.fish[d.fish$Sp == "Swa", "PFUA.min"])
-      )),
+            d.fish[d.fish$Sp == "Pum", "PFUA.min"]))),
   max_diet = list(
+    Bas	= unlist(c(d.fish[d.fish$Sp == "Bas", "PFHxS.max"], # in ng/g
+            d.fish[d.fish$Sp == "Bas", "PFOS.max"],
+            d.fish[d.fish$Sp == "Bas", "PFOA.max"],
+            d.fish[d.fish$Sp == "Bas", "PFNA.max"],
+            d.fish[d.fish$Sp == "Bas", "PFDA.max"],
+            d.fish[d.fish$Sp == "Bas", "PFUA.max"])), 
+    Swa	= unlist(c(d.fish[d.fish$Sp == "Swa", "PFHxS.max"], # in ng/g
+            d.fish[d.fish$Sp == "Swa", "PFOS.max"],
+            d.fish[d.fish$Sp == "Swa", "PFOA.max"],
+            d.fish[d.fish$Sp == "Swa", "PFNA.max"],
+            d.fish[d.fish$Sp == "Swa", "PFDA.max"],
+            d.fish[d.fish$Sp == "Swa", "PFUA.max"])),
     Dac	= unlist(c(d.fish[d.fish$Sp == "Dac", "PFHxS.max"], # in ng/g
             d.fish[d.fish$Sp == "Dac", "PFOS.max"],
             d.fish[d.fish$Sp == "Dac", "PFOA.max"],
             d.fish[d.fish$Sp == "Dac", "PFNA.max"],
             d.fish[d.fish$Sp == "Dac", "PFDA.max"],
             d.fish[d.fish$Sp == "Dac", "PFUA.max"])),
-    Dar	= unlist(c(d.fish[d.fish$Sp == "Dar", "PFHxS.max"], # in ng/g
-            d.fish[d.fish$Sp == "Dar", "PFOS.max"],
-            d.fish[d.fish$Sp == "Dar", "PFOA.max"],
-            d.fish[d.fish$Sp == "Dar", "PFNA.max"],
-            d.fish[d.fish$Sp == "Dar", "PFDA.max"],
-            d.fish[d.fish$Sp == "Dar", "PFUA.max"])), # same
     Min	= unlist(c(d.fish[d.fish$Sp == "Min", "PFHxS.max"], # in ng/g
             d.fish[d.fish$Sp == "Min", "PFOS.max"],
             d.fish[d.fish$Sp == "Min", "PFOA.max"],
@@ -244,50 +249,34 @@ inputFiles_list<-create_data_tables(
             d.fish[d.fish$Sp == "Fal", "PFNA.max"],
             d.fish[d.fish$Sp == "Fal", "PFDA.max"],
             d.fish[d.fish$Sp == "Fal", "PFUA.max"])),
-    Bas	= unlist(c(d.fish[d.fish$Sp == "Bas", "PFHxS.max"], # in ng/g
-            d.fish[d.fish$Sp == "Bas", "PFOS.max"],
-            d.fish[d.fish$Sp == "Bas", "PFOA.max"],
-            d.fish[d.fish$Sp == "Bas", "PFNA.max"],
-            d.fish[d.fish$Sp == "Bas", "PFDA.max"],
-            d.fish[d.fish$Sp == "Bas", "PFUA.max"])), 
     Mad	= unlist(c(d.fish[d.fish$Sp == "Mad", "PFHxS.max"], # in ng/g
             d.fish[d.fish$Sp == "Mad", "PFOS.max"],
             d.fish[d.fish$Sp == "Mad", "PFOA.max"],
             d.fish[d.fish$Sp == "Mad", "PFNA.max"],
             d.fish[d.fish$Sp == "Mad", "PFDA.max"],
             d.fish[d.fish$Sp == "Mad", "PFUA.max"])),
+    Dar	= unlist(c(d.fish[d.fish$Sp == "Dar", "PFHxS.max"], # in ng/g
+            d.fish[d.fish$Sp == "Dar", "PFOS.max"],
+            d.fish[d.fish$Sp == "Dar", "PFOA.max"],
+            d.fish[d.fish$Sp == "Dar", "PFNA.max"],
+            d.fish[d.fish$Sp == "Dar", "PFDA.max"],
+            d.fish[d.fish$Sp == "Dar", "PFUA.max"])), # same
     Pum	= unlist(c(d.fish[d.fish$Sp == "Pum", "PFHxS.max"], # in ng/g
             d.fish[d.fish$Sp == "Pum", "PFOS.max"],
             d.fish[d.fish$Sp == "Pum", "PFOA.max"],
             d.fish[d.fish$Sp == "Pum", "PFNA.max"],
             d.fish[d.fish$Sp == "Pum", "PFDA.max"],
-            d.fish[d.fish$Sp == "Pum", "PFUA.max"])),
-    Swa	= unlist(c(d.fish[d.fish$Sp == "Swa", "PFHxS.max"], # in ng/g
-            d.fish[d.fish$Sp == "Swa", "PFOS.max"],
-            d.fish[d.fish$Sp == "Swa", "PFOA.max"],
-            d.fish[d.fish$Sp == "Swa", "PFNA.max"],
-            d.fish[d.fish$Sp == "Swa", "PFDA.max"],
-            d.fish[d.fish$Sp == "Swa", "PFUA.min"])
-      )),
+            d.fish[d.fish$Sp == "Pum", "PFUA.max"]))),
   foodWeb = list(
-    # Phy	= c(0,	  0,	  0,	  0,	  0,	  0,	0,	0,	0,	0),
-    # Dac	= c(0.5,	0.5,	0,	  0,	  0,  	0,	0,	0,	0,	0),
-    # Dar	= c(0.1,	0,	  0.1,	0,	  0.1,	0,	0,	0,	0,	0.1),
-    # Min	= c(0.4,	0.5,	0,	  0,	  0,	  0,	0,	0,	0,	0.1),
-    # Fal	= c(0,	  0,	  0.15,	0.15,	0.5,	0,	0,	0,	0,	0.1),
-    # Bas	= c(0,	  0,	  0.1,	0.1,	0,    0,	0,	0,	0.5,	0.1),
-    # Mad	= c(0.5,	0.5,	0,	  0,	  0,	  0,	0,	0,	0,	0),
-    # Pum	= c(0.1,	0.1,	0.1,	0.1,	0,	  0,	0,	0,	0,	0.1),
-    # Swa	= c(0.5,	0.5,	0,	  0,	  0,	  0,	0,	0,	0,	0)
-Phy = c(1,0,0,0,0,0,0,0,0,0),
+Phy = c(0,0,0,0,0,0,0,0,0,0),
+Bas = c(0.8,0.2,0,0,0,0,0,0,0,0),
+Swa = c(0.3,0.6,0,0,0,0,0,0,0,0),
 Dac = c(0.5,0.4,0,0,0,0,0,0,0,0),
-Dar = c(0.5,0.6,0,0,0,0,0,0,0,0),
 Min = c(0.4,0.6,0,0,0,0,0,0,0,0),
-Fal = c(0.5,0.5,0,0,0,0,0,0,0,0),
-Bas = c(0.2,0.4,0,0.1,0.1,0,0,0,0,0.2),
-Mad = c(0.5,0.5,0,0,0,0,0,0,0,0),
-Pum = c(0.3,0.5,0.1,0,0.05,0,0,0,0,0.05),
-Swa = c(0.3,0.7,0,0,0,0,0,0,0,0)
+Fal = c(0.2,0.3,0,0.1,0.1,0.1,0,0,0,0),
+Mad = c(0.2,0.3,0,0.1,0.1,0.1,0,0,0,0),
+Dar = c(0.2,0.3,0,0.1,0,0,0,0,0,0),
+Pum = c(0.2,0.2,0.1,0,0.1,0.1,0,0,0,0)
       ),
   C_WTO_ng_mL = unlist(c(d.water[, "PFHxS.m"]/1000, # in ng/mL
                   d.water[, "PFOS.m"]/1000,
@@ -328,7 +317,7 @@ Swa = c(0.3,0.7,0,0,0,0,0,0,0,0)
   C_OX = unlist(c(d.water[, "DO.m"])), 
   T = unlist(c(d.water[, "temp.m"])),
   # log_Koc = c("calibr", 2.85	, 2.9, 2.203283149, 2.932949081, 5,	4.9900)
-  log_Koc = c("calibr", 2.85	, 2.9, 2.203283149,	6.983623,6,	4.9900)
+  log_Koc = c("Brown etal", 2.3317871	, 2.891004, 2.3032831,	3.0329491,	6,	5) # c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")
   
 # ,
   # log_Dmw = c("calibr-cosmotherm", 3.37, 4.61, 3.47, 4.10, 4.69, 5.34)

@@ -1,22 +1,37 @@
 
-
-# 3. Food Web Model
+#' Title: Food Web Model - run for one PFAA at the time. 
+#'
+#' @param PFAA 
+#' @param settings 
+#' @param numSpecies 
+#' @param oceanData 
+#' @param chemicalData 
+#' @param chemicalParams 
+#' @param organismData 
+#' @param foodWebData 
+#' @param dietData 
+#' @param kRTable 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 BioaccumulationModel <- function(
     PFAA, # a string c()
     settings, # a list new_Settings()
     numSpecies,# numeric, integer
-    oceanData, # DataFrame  | e.g. oceanData<-read.csv(file = "Data/Sun_etal/oceanData.csv", row.names = "X")
-    chemicalData, # DataFrame | e.g. chemicalData<-read.csv(file = "Data/Sun_etal/chemicalData_BMF.csv", row.names = "chemicalParameter")
-    chemicalParams, # DataFrame | e.g.  chemicalParams<-read.csv(file = "Data/Sun_etal/chemicalParameters.csv", row.names = "chemicalParameter")
-    organismData, # DataFrame | e.g.  organismData<-read.csv(file = "Data/Sun_etal/organismData_BMF.csv", row.names = "X") # where X is empty name
-    foodWebData, # pd.DataFrame | e.g. foodWebData <- read.csv(file = "./Data/Sun_etal/foodWebTable_BCFBMF.csv", row.names = "X")
+    oceanData, # DataFrame  
+    chemicalData, # DataFrame 
+    chemicalParams, # DataFrame 
+    organismData, # DataFrame 
+    foodWebData, # pd.DataFrame 
     dietData = NULL, # Optional[pd.DataFrame]=None,
     kRTable = NULL # :Optional[pd.DataFrame]=None
   ){
 
-    #######################
-    # Set up model settings
-    #######################
+    ###################################*
+    # Set up model settings ------
+    ###################################*
     chemicalData = chemicalData[,PFAA, drop = FALSE] # column with select PFAA, all rows
 
     chemicalParams = chemicalParams[, PFAA, drop = FALSE] # column with select PFAA, all rows
@@ -25,9 +40,9 @@ BioaccumulationModel <- function(
         dietData = dietData[, PFAA, drop = FALSE] # column with select PFAA, all rows
     }
 
-    ####################
-    # Read in parameters
-    ####################
+    #############################*
+    # Read in parameters -------
+    #############################*
 
     ## Ocean Parameters (numeric; feed into new_Environment())
     C_OX = oceanData['C_OX',1] #Dissolved Oxygen Concentration (mg/L)
@@ -86,9 +101,9 @@ BioaccumulationModel <- function(
     Beta =  0.035 # Proportionality constant representing the sorption capacity of NLOM to that of octanol.
     # Beta is specifically relevant to calculating partitioning in phytoplankton, where NLOM is replaced with NLOC
 
-    ####################################
-    # Read in system-specific parameters
-    ####################################
+    #############################################*
+    # Read in system-specific parameters --------
+    #############################################*
     ## System-Specific Chemical Data
     C_WTO = chemicalData['C_WTO', ] #Total chemical concentration in the water column above the sediments (g/L)
     C_s = chemicalData['C_s', ] #.0358; %C_s is the Concentration in sediment
@@ -98,9 +113,9 @@ BioaccumulationModel <- function(
     Pd = foodWebData[,1] #Fraction of the diet consisting of detritus
     P = foodWebData[,c(1:numSpecies+1), drop = FALSE] #Fraction of the diet consisting of prey item i
 
-    ###############################
-    # Calculate dietary composition
-    ###############################
+    ########################################*
+    # Calculate dietary composition ------
+    ########################################*
 
     nu_ND = array(rep(0, numSpecies))
     nu_LD = array(rep(0, numSpecies))
@@ -116,9 +131,9 @@ BioaccumulationModel <- function(
           nu_WD[i] = sum((P[i,] * nu_WB)) #Overall water content of diet
     } 
      
-    ######################
-    # Instantiate classes
-    ######################
+    ###############################*
+    # Instantiate classes --------
+    ###############################*
     env = new_Environment(C_OX=C_OX, T=T, C_SS=C_SS, OCS=OCS, pH=pH)$get_vars()
     chem = new_Chemical(Log_Kow=Log_Kow, Log_Kpw=Log_Kpw, Log_Dmw=Log_Dmw, pKa=pKa,
                         Log_Koc=Log_Koc, chemID=chemID,
@@ -128,9 +143,9 @@ BioaccumulationModel <- function(
     
     chemdata = new_ChemData(C_WTO=C_WTO, C_s=C_s, Phi=Phi, env=env, chem=chem)$get_vars()
 
-    ############################
-    # Run model and save results
-    ############################
+    #####################################*
+    # Run model and save results --------
+    #####################################*
   
     Parameters = array(data = c('C_B','Phi','mO','C_WTO','C_WDP',
                                 'Water','C_s','FeedRate', 'Sediment', 'Diet', 'Gill_uptake',
@@ -151,7 +166,7 @@ BioaccumulationModel <- function(
     if(settings$chooseDiet == 'default'){
         C_D = array(rep(0, numSpecies))
 
-        for (i in 1:numSpecies){ # not phytoplankton
+        for (i in 1:numSpecies){ # not phytoplankton, start with numSpecies 1: 4
             orgi = new_Organism(W_B = W_B[i], m_O = m_O[i], GRF = GRF[i], 
                                 nu_NB = nu_NB[i], nu_LB = nu_LB[i],
                                 nu_PB = nu_PB[i], nu_OB = nu_OB[i],
@@ -172,12 +187,15 @@ BioaccumulationModel <- function(
             Results0<-SSC_B(settings=settings, chemdata=chemdata, C_D=C_D, P=P[i,], Pd=Pd[i], env=env, chem=chem, org=orgi, kRTable = kRTable)
             Results[i,] = Results0
             C_D[i] = Results[i,1]
+            # print(C_D)
+            # print("**")
         }
 
     } else if (settings$chooseDiet == 'forced'){
         # read in empirical diet data
-        C_D <- dietData # correct 
-        # insert modeled phytoplankton concentration, which is not empirically measured
+        C_D <- dietData # manually provided PFAS in each diet item
+        
+        # insert modeled phytoplankton data, which are not empirically measured
         org0 = new_Organism(W_B[1], m_O[1], GRF[1], nu_NB[1], nu_LB[1], nu_PB[1], nu_OB[1], nu_WB[1],
                         nu_ND[1], nu_LD[1], nu_PD[1], nu_OD[1], nu_WD[1], epsilon_N[1], epsilon_L[1], epsilon_P[1],
                         epsilon_O[1], epsilon_W[1], switchk_1[1], switchG_D[1], switchk_R[1], A[1], B[1], sigma,
@@ -190,8 +208,10 @@ BioaccumulationModel <- function(
                            C_D=C_D, P=P[1,], Pd=Pd[1], env=env, chem=chem, org=org0, kRTable = kRTable)
 
         Results[1,] = Results_phy
-        C_D[1,1] = Results_phy[1,1]
-        for (i in 1:numSpecies){
+        C_D[1,1] = Results_phy[1,1] # new estimated value, used in the loop below
+      
+        # print(numSpecies)
+        for (i in 1:numSpecies){ # all including phytoplankton
             orgi = new_Organism(W_B[i], m_O[i], GRF[i], nu_NB[i], nu_LB[i], nu_PB[i], nu_OB[i], nu_WB[i],
                             nu_ND[i], nu_LD[i], nu_PD[i], nu_OD[i], nu_WD[i], epsilon_N[i], epsilon_L[i], epsilon_P[i],
                             epsilon_O[i], epsilon_W[i], switchk_1[i], switchG_D[i], switchk_R[i], A[i], B[i], sigma,
@@ -202,8 +222,36 @@ BioaccumulationModel <- function(
                              C_D=C_D, P=P[i,], Pd=Pd[i], env=env, chem=chem, org=orgi, kRTable = kRTable)
             Results[i,] = Results0
         }
-    }
+    }else if (settings$chooseDiet == 'zero'){
+      
+       C_D = array(rep(0, numSpecies))
 
+        for (i in 1:numSpecies){ # not phytoplankton, start with numSpecies 1: 4
+            orgi = new_Organism(W_B = W_B[i], m_O = m_O[i], GRF = GRF[i], 
+                                nu_NB = nu_NB[i], nu_LB = nu_LB[i],
+                                nu_PB = nu_PB[i], nu_OB = nu_OB[i],
+                                nu_WB = nu_WB[i], nu_ND = nu_ND[i],
+                                nu_LD = nu_LD[i], nu_PD = nu_PD[i],
+                                nu_OD =nu_OD[i], nu_WD = nu_WD[i],
+                                epsilon_N = epsilon_N[i], epsilon_L = epsilon_L[i],
+                                epsilon_P = epsilon_P[i], epsilon_O = epsilon_O[i],
+                                epsilon_W = epsilon_W[i], switchk_1 = switchk_1[i],
+                                switchG_D = switchG_D[i], switchk_R = switchk_R[i],
+                                A = A[i], B = B[i],
+                                MMR = MMR[i], RMR = RMR[i],
+                                P_B = P_B[i],
+                                scaling_exp = scaling_exp[i],
+                                feeding_exp = feeding_exp[i],
+                                sigma = sigma,
+                                env = env, settings = settings,chem = chem)$get_vars()
+            Results0<-SSC_B(settings=settings, chemdata=chemdata, C_D=C_D, P=P[i,], Pd=Pd[i], env=env, chem=chem, org=orgi, kRTable = kRTable)
+            Results[i,] = Results0
+            # C_D[i] = Results[i,1]
+            # print(C_D)
+            # print("**")
+        }
+    }
+    
     Results$C_B <- Results$C_B*1000 # convert from ng/g to ng/kg
     Results$logC_B <- log10(Results$C_B) # units in ng/kg
     Results$C_B_ngg <- Results$C_B / 1000 # convert back to ng/g

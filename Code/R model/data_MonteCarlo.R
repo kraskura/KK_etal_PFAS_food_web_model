@@ -1,5 +1,13 @@
 
 
+# Title: Data prep for monte carlo simulation 
+# Purpose: extracts the min, max, mean values for fish, water, and sediment  PFAS 
+# concentrations, fish body sizes, and water temperatures. 
+# These values are used in mc_sim_data_table.R to randomly select the mentioned 
+# values when constructing inputFiles_list for a model run. 
+# 
+
+
 # library(readxl)
 # library(tidyverse)
 # 
@@ -7,26 +15,18 @@
 
 library(tidyverse)
 library(readxl)
+library(here)
 # # pull in relevant data:
-d.fish.jba<-read.csv("../../Data/Original_Brown_etal/JBA/JBA_Biota_Data.csv") #fish
-d.fish.w.jba<-read_xlsx(path = "../../Data/Original_Brown_etal/JBA/JBA_Biota_fishmass_kk.xlsx", sheet = "data")
-d.water.jba<-read.csv("../../Data/Original_Brown_etal/JBA/JBA_Water_Data.csv") #water
-d.sed.jba<-read.csv("../../Data/Original_Brown_etal/JBA/JBA_Sediment_Data.csv") #sediment
+d.fish.jba<-read.csv(here("Data/Original_Brown_etal/JBA/JBA_Biota_Data.csv")) #fish
+d.fish.w.jba<-read_xlsx(here("Data/Original_Brown_etal/JBA/JBA_Biota_fishmass_kk.xlsx"), sheet = "data")
+d.water.jba<-read.csv(here("Data/Original_Brown_etal/JBA/JBA_Water_Data.csv")) #water
+d.sed.jba<-read.csv(here("Data/Original_Brown_etal/JBA/JBA_Sediment_Data.csv")) #sediment
 
-d.fish.wg<-read.csv("../../Data/Original_Brown_etal/WG/WG_Biota_Data.csv") #fish
-d.fish.w.wg<-read_xlsx(path = "../../Data/Original_Brown_etal/WG/WG_fishMass_kk.xlsx", sheet = "data")
-d.water.wg<-read.csv("../../Data/Original_Brown_etal/WG/WG_Water_Data.csv") #water
-d.sed.wg<-read.csv("../../Data/Original_Brown_etal/WG/WG_Sediment_Data.csv") #sediment
+d.fish.wg<-read.csv(here("Data/Original_Brown_etal/WG/WG_Biota_Data.csv")) #fish
+d.fish.w.wg<-read_xlsx(here("Data/Original_Brown_etal/WG/WG_fishMass_kk.xlsx"), sheet = "data")
+d.water.wg<-read.csv(here("Data/Original_Brown_etal/WG/WG_Water_Data.csv")) #water
+d.sed.wg<-read.csv(here("Data/Original_Brown_etal/WG/WG_Sediment_Data.csv")) #sediment
 
-# d.fish.jba<-read.csv("./Data/Original_Brown_etal/JBA/JBA_Biota_Data.csv") #fish
-# d.fish.w.jba<-read_xlsx(path = "./Data/Original_Brown_etal/JBA/JBA_Biota_fishmass_kk.xlsx", sheet = "data")
-# d.water.jba<-read.csv("./Data/Original_Brown_etal/JBA/JBA_Water_Data.csv") #water
-# d.sed.jba<-read.csv("./Data/Original_Brown_etal/JBA/JBA_Sediment_Data.csv") #sediment
-# 
-# d.fish.wg<-read.csv("./Data/Original_Brown_etal/WG/WG_Biota_Data.csv") #fish
-# d.fish.w.wg<-read_xlsx(path = "./Data/Original_Brown_etal/WG/WG_fishMass_kk.xlsx", sheet = "data")
-# d.water.wg<-read.csv("./Data/Original_Brown_etal/WG/WG_Water_Data.csv") #water
-# d.sed.wg<-read.csv("./Data/Original_Brown_etal/WG/WG_Sediment_Data.csv") #sediment
 
 d.fish.wg$Seasonality<-"Fall"
 d.fish.w.wg$Seasonality<-"Fall"
@@ -65,6 +65,14 @@ d.fish<-rbind(d.fish.wg, d.fish.jba) %>%
 
 # fillet-to-whole body conversion 
 d.fish[d.fish$Tissue == "Muscle", c(5:8)]<-d.fish[d.fish$Tissue == "Muscle", c(5:8)]*2.5
+
+# sample size of each measurement 
+n_fish <- d.fish %>% 
+  group_by(loc, Seasonality, SppAlias) %>% 
+  dplyr::summarize(n = n(),
+                   min_size = min(Length),
+                   max_length = max(Length)) %>%
+  as.data.frame()
 
 # water dataset 
 d.water.wg <- d.water.wg %>% 

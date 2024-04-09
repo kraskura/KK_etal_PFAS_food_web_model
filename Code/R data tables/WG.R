@@ -155,14 +155,10 @@ inputFiles_list<-create_data_tables(
             d.fish[d.fish$Sp == "Bas", "PFDA.max"],
             d.fish[d.fish$Sp == "Bas", "PFUA.max"]))),
   foodWeb = list(
-      # Phy = c(0, 0.0, 0.0, 0.0, 0.0), 
-      # Pry = c(0.2, 0.8, 0.0, 0.0, 0.0),
-      # Bgl = c(0, 0.4, 0.4, 0.0, 0.0),
-      # Bas = c(0, 0.2, 0.8, 0, 0.0)
 Phy = c(1,0,0,0,0),
-Pry = c(0.4,0.6,0,0,0),
+Pry = c(0.7,0.3,0,0,0),
 Bgl = c(0.1,0.3,0.6,0,0),
-Bas = c(0.3,0.3,0.3,0.1,0)
+Bas = c(0.1,0.1,0.7,0.1,0)
       ),
   C_WTO_ng_mL = unlist(c(d.water[, "PFHxS.m"]/1000, # original data in ng/L convert to ng/mL
                   d.water[, "PFOS.m"]/1000,
@@ -203,7 +199,7 @@ Bas = c(0.3,0.3,0.3,0.1,0)
   C_OX = 8, # assumed
   T = unlist(c(d.water[, "temp.m"])),
   # c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")
-  log_Koc = c("calibr", 5.369148,	6.6567779,	5.3035039,	6.983623,	4.580,	4.99000)
+  log_Koc = c("Brown etal", 2.3317871	, 2.891004, 2.3032831,	3.0329491,	6,	5) # c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA")
 
   # log_Dmw = c("calibr-cosmotherm", 3.37, 4.61, 3.47, 4.10, 4.69, 5.34)
            			

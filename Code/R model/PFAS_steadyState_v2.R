@@ -1,6 +1,23 @@
   
-# 2. Steady State Equation for calculating concentration in a single organism
-
+#' Title: Steady State Equation for calculating concentration in a single organism
+#'
+#' @param settings 
+#' @param PFAA 
+#' @param chemdata 
+#' @param env 
+#' @param chem 
+#' @param org 
+#' @param C_D 
+#' @param P 
+#' @param Pd 
+#' @param kRTable 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' 
+#' 
 SSC_B<-function(settings,
                 PFAA,
                 chemdata,
@@ -12,9 +29,9 @@ SSC_B<-function(settings,
                 Pd,
                 kRTable=NULL){
   
-    ##############################################
-    ## Calculate intermediate model inputs & rates
-    ##############################################
+    ########################################################### *
+    ## Calculate intermediate model inputs & rates ----
+    ########################################################### *
     C_WDP <- chemdata$C_WDP
 
     k_1 <- org$k_1 #k_1 is the clearance rate constant (L/kg*d) for chemical uptake via respiratory area
@@ -56,9 +73,9 @@ SSC_B<-function(settings,
     }
     
     
-     ##################################
-     ## Calculate tissue concentration 
-     ##################################
+     ############################################### *
+     ## Calculate tissue concentration -----
+     ############################################### *
     
     if (settings$chooseModel == "Sun_etal_2022"){
       C_B = ((k_1 * (org$m_O * chemdata$Phi * chemdata$C_WTO + (1 - org$m_O) * C_WDP) +
@@ -73,9 +90,9 @@ SSC_B<-function(settings,
       message("expect error b/c model type")
     }
     
-    #################################
-    ## Create table of output values
-    ################################
+    ################################################ *
+    ## Create table of output values ------
+    ################################################ *
     D_OW = chem$D_OW
     D_MW = chem$D_MW
     D_BW = org$D_BW
@@ -176,17 +193,6 @@ SSC_B<-function(settings,
                            'Phi'= chemdata$Phi, 
                            'RMR' = org$RMR)))
     
-    # Output_Data <- unlist(c( C_B, org$m_O, chemdata$Phi, chemdata$C_WTO, C_WDP, Water, chemdata$C_s, # 6
-    #                 FeedRate, Diet, Gill_uptake, Dietary_uptake, Gill_uppct, Diet_uppct, # 6
-    #                 G_V, G_D, G_F, org$W_B, E_W, E_D, k_1, k_2, k_D, k_E, k_G, k_R_est, # 12
-    #                 TotalElim_rate, kr_pct, chem$pKa, log10(D_BW) ,chem$Log_Kow, # 5
-    #                 log10(D_MW),log10(D_OW), chem$Log_Kpw,D_BW,D_MW,D_OW, chem$K_PW, # 7
-    #                  env$pHi, env$pHg, K_GB, org$nu_NB,org$nu_LB, org$nu_PB,org$nu_OB, #7
-    #                 org$nu_WB,org$epsilon_N,org$epsilon_L, org$epsilon_P, # 4
-    #                 org$epsilon_O, chem$Log_Koc,chemdata$Phi)) # 3
-
-    # 5 per row / order not changed
-    # write.csv(file = "../data/Output_SSC_kk.csv", x = Output_Data_df, row.names = T)
     return(Output_Data)
     
 }

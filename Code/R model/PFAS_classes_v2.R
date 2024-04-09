@@ -1,11 +1,14 @@
 
+# Author: Krista Kraskura
+# Date: march 2024
+# Description: Creating new data classes that define the physical and biological
+# environments, the organism, the chemical (different PFAS)
+# Use:
+
+
 # # install.packages('assertthat')
 library(assertthat)
 
-# ***********************************************
-# Look for constants. search: # =constants
-# Look for returns. search: # =return
-# ***********************************************
 # Template to create classes:
 
 # new_Class<-function(x, env){
@@ -32,7 +35,7 @@ library(assertthat)
 # ***********************************************
 new_Settings <- function(
 		chooseDiet, # default, forced; 
-		chooseDmw = "Droge",
+		chooseDmw = "Droge", # or 'calculated'
 		chooseEw = "empirical",
 		chooseKoc = "Koc",
 		chooseModel = "Sun_etal_2022"){
@@ -388,7 +391,7 @@ new_Organism <- function(
   # This could potentially be due to growth dilution, onotogenetic shifts, or other processes, not necessarily feeding rate
 
     if(settings$chooseModel == "Sun_etal_2022"){
-      G_D = 0.022 * W_B^feeding_exp * exp(0.06*env$T)
+      G_D = 0.022 * W_B^feeding_exp * exp(0.08*env$T) # McLeod et al 2016 for 0.08*T 
     }else if(settings$chooseModel == "Liang_etal_2022"){
       G_D = 0.22 * W_B^0.85 * exp(0.06*env$T) # changed
     }else{
