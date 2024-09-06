@@ -5,3 +5,4 @@
 ignoreMisc/
 Data/outputs/*.csv
 .env
+Data/MDE/
