@@ -1,8 +1,4 @@
----
----
----
-
-# **PFAS Bioaccumulation in fish.** 
+# **PFAS Bioaccumulation in fish.**
 
 Materials used for SERDP report: September 6, 2024.
 
@@ -18,7 +14,7 @@ The adopted PFAS food web was published by [Sun et al. (2022)](https://doi.org/1
 
 The model use and implementation: The code **EXECUTE.R** in the local directly runs all modelling files to obtain results.
 
-##### .Code/R model/ 
+##### .Code/R model/
 
 -   contains R files (all functions):
 
@@ -52,7 +48,7 @@ The model use and implementation: The code **EXECUTE.R** in the local directly r
 
     -   These input data tables are used to parameterize the model.
 
-##### .Data/ 
+##### .Data/
 
 -   The orginal data files with all measured fish, sediment, and water PFAS values.
 
@@ -76,7 +72,7 @@ The model use and implementation: The code **EXECUTE.R** in the local directly r
 
 ------------------------------------------------------------------------
 
-### Contact info: 
+### Contact info:
 
 Please contact Krista Kraskura at kkraskura\@towson.edu with any questions and concerns.
 
