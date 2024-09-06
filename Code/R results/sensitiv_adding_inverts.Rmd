@@ -1,0 +1,632 @@
+---
+title: "Predictions with invert food web"
+author: "Krista Kraskura"
+date: "`r Sys.Date()`"
+output: 
+  # pdf_document:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    toc_depth: 4
+    theme: journal
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, echo = FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE, fig.width = 5, fig.height = 5.2, fig.align = "center")
+```
+
+### Fish food web bioaccumulation model:
+
+***Goal***:
+
+To add inverts to the food web and run a predictive model run. 
+
+***The model:***
+
+The food web model is adapted from [Sun et al 2020](https://doi.org/10.1039/D2EM00047D).
+Model settings set to predict PFAS concentrations across the food web. 
+
+```{r source, warning=FALSE, message=FALSE, echo=FALSE}
+
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(reshape)
+library(tibble) # needed to get named list of dataframes (in data_tables.R)
+library(readxl)
+library(ggformat2)
+library(here)
+here::i_am(path = "./Code/R results/sensitiv_adding_inverts.Rmd")
+# here()
+
+# functions to run food web model
+source(here("Code", "R model", "PFAS_bioaccum_v2.R"))
+source(here("Code", "R model", "PFAS_classes_v2.R"))
+source(here("Code", "R model", "PFAS_steadyState_v2.R"))
+source(here("Code", "R model", "runEcosystemModels.R")) # custom written
+source(here("Code", "R model", "runErrorEstimates.R")) # custom written 
+source(here("Code", "R model", "data_tables.R"))
+source(here("Code", "R model", "data_MonteCarlo.R")) # for sample size 
+
+# source("../Code/PFAS_tissuePart_v2.R")
+
+# source data tables for each objective
+kRTable = read.csv(here("Data", 'export_krTable.csv'), row.names = "X", header = T)
+colnames(kRTable)<-c("kr/kb", "PFAA", "chemID")
+
+PFAS_List <- c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')
+PFAS_labels <- c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA','C11 PFCA')
+PFAA_cols <- c('PFHxS' = '#332288', # 
+             'PFOS' = '#882255', # 
+             'PFOA' = '#117733',
+             'PFNA' = '#88CCEE',
+             'PFDA' = 'orange',
+             'PFUA' = '#AA4499')
+
+p_lines <- data.frame('x' = c(0, 7),
+                      'y' = c(0, 7))
+p_lines$y1 <- p_lines$x-1
+p_lines$y2 <- p_lines$x+1
+p_lines$y3 <- p_lines$x-log10(2)
+p_lines$y4 <- p_lines$x+log10(2)
+
+```
+
+#### Willow Grove median data - inverts in the food web 
+
+```{r willow grove }
+
+source(here("Code", "R data tables", "WG_invert_fw.R"))
+
+# PFAS in each diet item are calculated from trophic transfer
+settings_modelDiet = new_Settings(
+  chooseDiet = 'default',
+  chooseKoc = 'Koc',
+  chooseDmw = "Droge", # default = "Droge", or use "calculated" 
+  chooseEw = "empirical", # default = 'empirical', or use "beta#", where:
+  # must be in format: beta#, #beta [# = numeric var, no spaces, no special char]"
+)
+
+AllDataWG_fw_inv<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR',
+                                    "Gill_uptake","Dietary_uptake", "Sediment_uptake",
+                                    "Gill_up%", "Diet_up%", 'Sed_up%',
+                                    "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  min_diet_WTO_C_s = FALSE,
+                  max_diet_WTO_C_s = FALSE)
+```
+
+```{r wg model bias tables, echo = FALSE, message=FALSE, warning=FALSE}
+
+wg1_error_fw_inv <- estimate_error(MetricData = AllDataWG_fw_inv, DataID = "wg_inv")
+
+```
+
+```{r willow grove data output and plots, fig.cap= "Figure. 1"}
+# AllDataWG <- AllDataWG[!c(AllDataWG$PFAA == "PFUA" | AllDataWG$PFAA == "PFDA"),]
+
+p1<-ggplot(data = AllDataWG_fw_inv, aes(x = log_ngkg_re,
+                                        y = Obs_logngkg,
+                                        color = PFAA, 
+                                        label = SppAlias))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y, label = NULL),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1, label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2, label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3, label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4, label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_errorbar(aes(ymin = Obs_logngkg - Obs_logngkg_Lo, ymax = Obs_logngkg + Obs_logngkg_Up), linewidth = 0.5) +
+    geom_errorbarh(aes(xmin = log_ngkg_re - logngkg_re_Lo, xmax = log_ngkg_re + logngkg_re_Up), linewidth = 0.5) +
+    geom_point(pch = 19, size = 3)+
+    theme_bw()+
+    # geom_text(nudge_x = 0.01)+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'predicted diet')+
+    annotate(geom = "text", label = bquote(R^2 == .(round(wg1_error_fw_inv[[3]], 3))),
+             x = 0.2, y = 7, size = 4, hjust = 0)+
+    annotate(geom = "text", label = bquote(MB[avg] == .(round(wg1_error_fw_inv[[1]], 3))),
+             x = 0.2, y = 6, size = 4, hjust = 0)+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Measured log PFAA (ng/kg)')+
+    # coord_cartesian(ylim = c(2,6.5), xlim = c(2,6.5))+
+    theme(legend.position = "right")
+
+p1
+ggsave(filename = here("./Figures/WG_addingInverts.png"), width = 3.5, height = 4)
+
+
+```
+
+PFAS predictions in Willow Grove system.
+(**A**) The PFAS in each diet item were known and provided during the modelling. (**B**) The PFAS values were estimated based on the food web trophic interactions, the only known PFAS values here were in water and sediment. The dot models values when fish tissue PFAS, water, and sediment values are at their measured mean values. The food web structure was the same between both cases. The dotted lines mark values where data were over- or under-predicted by a factor or 2 (lower line) and 10 (upper line), respectively.
+
+```{r willow grove food web}
+inputFiles_list[[6]] %>%
+  kbl() %>%
+  kable_classic(full_width = F, html_font = "Verdana")
+
+```
+
+```{r willow grove diet and water proportions diet, eval=FALSE}
+
+# summarize actual values 
+mean_d<-AllDataWG_fw_inv %>%
+dplyr::group_by(PFAA, SppAlias) %>%
+summarize(Gill = mean(`Gill_up%`),
+          Diet = mean(`Diet_up%`),
+          Sediment = mean(`Sed_up%`),
+          Elimination = mean(`Total Elimination`), 
+          WB = mean(WB)) %>%
+pivot_longer(cols = c(Gill, Diet, Sediment, Elimination), names_to = "Path", values_to = "Uptake_g.kg.day")
+
+ggplot(AllDataWG_fw_inv[!c(AllDataWG_fw_inv$SppAlias == "Ins" |
+                          AllDataWG_fw_inv$SppAlias == "Cru" |
+                          AllDataWG_fw_inv$SppAlias == "Wor" |
+                          AllDataWG_fw_inv$SppAlias == "Zpl"), 
+                          ], aes(x = `Diet_up%`,
+              y = log_ngkg_re - Obs_logngkg,
+              color = PFAA))+
+  # facet_grid(.~PFAA, scales = "free")+
+  scale_color_manual(values = PFAA_cols)+
+  # geom_smooth(method = "lm",formula = y~x, aes(group = PFAA, fill = NULL), color = "grey", se=T, size =0.5)+
+  geom_point(pch=19, size = 3)+
+  xlim(0.5, 1.1)+
+  geom_hline(yintercept = 0, color = "black")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  theme_bw()+
+  ylab("Diff bioconc (log(Pred) - log(Obs))")+
+  xlab("% Diet uptake")
+
+```
+
+<br/> <br/>
+
+
+#### JBA spring median data - inverts in the food web 
+
+```{r jba spring data}
+source(here("Code", "R data tables", "JBA_spring_invert_fw.R"))
+
+settings_modelDiet = new_Settings(
+  chooseDiet = 'default'
+)
+
+AllDataJBAsp_fw_inv<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR',
+                                    "Gill_uptake","Dietary_uptake", "Sediment_uptake",
+                                    "Gill_up%", "Diet_up%", 'Sed_up%',
+                                    "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  min_diet_WTO_C_s = FALSE,
+                  max_diet_WTO_C_s = FALSE)
+
+```
+
+```{r jba spring model bias tables, echo = FALSE, message=FALSE, warning=FALSE}
+
+jba_sp1_error_fw_inv <- estimate_error(MetricData = AllDataJBAsp_fw_inv,
+                                    DataID = "jba_sp_fw_inv_sameDay")
+
+```
+
+```{r jba spring figures, fig.cap= "Figure. 2"}
+
+p2<-ggplot(data = AllDataJBAsp_fw_inv, aes(x = log_ngkg_re,
+                                           y = Obs_logngkg,
+                                           color = PFAA, 
+                                           label = SppAlias))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y,
+                                            label = NULL),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_errorbar(aes(ymin = Obs_logngkg - Obs_logngkg_Lo, ymax = Obs_logngkg + Obs_logngkg_Up), size = 0.5) +
+    geom_errorbarh(aes(xmin = log_ngkg_re - logngkg_re_Lo, xmax = log_ngkg_re + logngkg_re_Up), size = 0.5) +
+    geom_point(pch = 19, size = 3)+
+    theme_bw()+
+    # geom_text(nudge_x = 0.1, size = 3)+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'SPRING: trophic transfer of PFAS')+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Measured log PFAA (ng/kg)')+
+    annotate(geom = "text", label = bquote(R^2 == .(round(jba_sp1_error_fw_inv[[3]], 3))),
+             x = 0.2, y = 7, size = 4, hjust = 0)+
+    annotate(geom = "text", label = bquote(MB[avg] == .(round(jba_sp1_error_fw_inv[[1]], 3))),
+             x = 0.2, y = 6, size = 4, hjust = 0)+
+  # coord_cartesian(ylim = c(2,6.5), xlim = c(2,6.5))+
+    theme(legend.position = "right")
+
+# p1_fish_re
+legend_plot <- ggplot(data = AllDataJBAsp_fw_inv,
+         aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA))+
+  geom_point()+
+  scale_color_manual(values = PFAA_cols)+
+  theme(legend.title = element_blank())+
+  theme_bw()
+
+legend<-cowplot::get_legend(legend_plot)
+p2
+ggsave(filename = here("./Figures/JBAsp_addingInverts.png"), width = 3.5, height = 4)
+
+```
+
+```{r jba spring food web}
+inputFiles_list[[6]] %>%
+  kbl() %>%
+  kable_classic(full_width = F, html_font = "Verdana")
+
+```
+
+```{r jba spring diet and water proportions diet, eval = FALSE}
+
+# summarize actual values 
+mean_d<-AllDataJBAsp_fw_inv %>%
+dplyr::group_by(PFAA, SppAlias) %>%
+summarize(Gill = mean(`Gill_up%`),
+          Diet = mean(`Diet_up%`),
+          Sediment = mean(`Sed_up%`),
+          Elimination = mean(`Total Elimination`), 
+          WB = mean(WB)) %>%
+pivot_longer(cols = c(Gill, Diet, Sediment, Elimination), names_to = "Path", values_to = "Uptake_g.kg.day")
+
+ggplot(AllDataJBAsp_fw_inv[!c(AllDataJBAsp_fw_inv$SppAlias == "Ins" |
+                          AllDataJBAsp_fw_inv$SppAlias == "Cru" |
+                          AllDataJBAsp_fw_inv$SppAlias == "Wor" |
+                          AllDataJBAsp_fw_inv$SppAlias == "Zpl"), 
+                          ], aes(x = `Diet_up%`,
+              y = log_ngkg_re - Obs_logngkg,
+              color = PFAA, size = C_s))+
+  # facet_grid(.~PFAA, scales = "free")+
+  scale_color_manual(values = PFAA_cols)+
+  # geom_smooth(method = "lm",formula = y~x, aes(group = PFAA, fill = NULL), color = "grey", se=T, size =0.5)+
+  geom_point(pch=19)+
+  # xlim(0.5, 1.1)+
+  geom_hline(yintercept = 0, color = "black")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  theme_bw()+
+  ylab("Diff bioconc (log(Pred) - log(Obs))")+
+  xlab("% Diet uptake")
+
+```
+
+
+#### JBA summer median data - inverts in the food web
+
+```{r jba summer data, echo = FALSE, message=FALSE, warning=FALSE}
+source(here("Code", "R data tables", "JBA_summer_invert_fw.R"))
+
+settings_modelDiet = new_Settings(
+  chooseDiet = 'default'
+)
+
+AllDataJBAsum_fw_inv<-runEcosystemModel(settings = settings_modelDiet,
+                  inputFiles_list = inputFiles_list,
+                  parameterList = c('C_B','C_WTO','C_s','k1','k2','ke','kg','kd',
+                                    'Total Elimination', 'RMR',
+                                    "Gill_uptake","Dietary_uptake", "Sediment_uptake",
+                                    "Gill_up%", "Diet_up%", 'Sed_up%',
+                                    "G_V", "G_D"),
+                  PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                  dietData = inputFiles_list$dietData,
+                  kRTable = kRTable,
+                  min_diet_WTO_C_s = FALSE,
+                  max_diet_WTO_C_s = FALSE)
+
+```
+
+```{r jba summer model bias tables, echo = FALSE, message=FALSE, warning=FALSE}
+
+jba_sum1_error_fw_inv <- estimate_error(MetricData = AllDataJBAsum_fw_inv,
+                                        DataID = "jba_sum_fw_inv_sameDay")
+
+```
+
+```{r jba plots and outputs, echo = FALSE, message=FALSE, warning=FALSE, fig.cap= "Figure 3"}
+
+p3<-ggplot(data = AllDataJBAsum_fw_inv, aes(x = log_ngkg_re,
+                                            y = Obs_logngkg,
+                                            color = PFAA,
+                                            label = SppAlias))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y,
+                                            label = NULL),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4,
+                                            label = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_errorbar(aes(ymin = Obs_logngkg - Obs_logngkg_Lo, ymax = Obs_logngkg + Obs_logngkg_Up), size = 0.5) +
+    geom_errorbarh(aes(xmin = log_ngkg_re - logngkg_re_Lo, xmax = log_ngkg_re + logngkg_re_Up), size = 0.5) +
+    geom_point(pch = 19, size = 3)+
+    theme_bw()+
+    # geom_text(nudge_x = 0.2, size =3)+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'SUMMER: predicted trophic transfer')+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Measured log PFAA (ng/kg)')+
+    annotate(geom = "text", label = bquote(R^2 == .(round(jba_sum1_error_fw_inv[[3]], 3))),
+             x = 0.2, y = 7, size = 4, hjust = 0)+
+    annotate(geom = "text", label = bquote(MB[avg] == .(round(jba_sum1_error_fw_inv[[1]], 3))),
+             x = 0.2, y = 6, size = 4, hjust = 0)+
+  # coord_cartesian(ylim = c(2,6.5), xlim = c(2,6.5))+
+    theme(legend.position = "none")
+
+# p1_fish_re
+legend_plot <- ggplot(data = AllDataJBAsum_fw_inv,
+         aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA))+
+  geom_point()+
+  scale_color_manual(values = PFAA_cols)+
+  theme(legend.title = element_blank())+
+  theme_bw()
+
+legend<-cowplot::get_legend(legend_plot)
+
+p3
+ggsave(filename = here("./Figures/JBAsum_addingInverts.png"), width = 3.5, height = 4)
+
+```
+
+```{r jba summer food web}
+inputFiles_list[[6]] %>%
+  kbl() %>%
+  kable_classic(full_width = F, html_font = "Verdana")
+
+```
+
+```{r jba summer diet and water proportions diet, eval=FALSE}
+
+AllDataJBAsum_fw_inv$sed_water_PFASratio<-AllDataJBAsum_fw_inv$C_s / AllDataJBAsum_fw_inv$C_WTO
+
+# summarize actual values 
+mean_d<-AllDataJBAsum_fw_inv %>%
+dplyr::group_by(PFAA, SppAlias) %>%
+summarize(Gill = mean(`Gill_up%`),
+          Diet = mean(`Diet_up%`),
+          Sediment = mean(`Sed_up%`),
+          Elimination = mean(`Total Elimination`), 
+          WB = mean(WB)) %>%
+pivot_longer(cols = c(Gill, Diet, Sediment, Elimination), names_to = "Path", values_to = "Uptake_g.kg.day")
+
+ggplot(AllDataJBAsum_fw_inv[!c(AllDataJBAsum_fw_inv$SppAlias == "Ins" |
+                          AllDataJBAsum_fw_inv$SppAlias == "Cru" |
+                          AllDataJBAsum_fw_inv$SppAlias == "Wor" |
+                          AllDataJBAsum_fw_inv$SppAlias == "Zpl"), 
+                          ], aes(x = `Diet_up%`,
+              y = log_ngkg_re - Obs_logngkg,
+              color = PFAA, size = C_s))+
+  # facet_grid(.~PFAA, scales = "free")+
+  scale_color_manual(values = PFAA_cols)+
+  # geom_smooth(method = "lm",formula = y~x, aes(group = PFAA, fill = NULL), color = "grey", se=T, size =0.5)+
+  geom_point(pch=19)+
+  # xlim(0.5, 1.1)+
+  geom_hline(yintercept = 0, color = "black")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  theme_bw()+
+  ylab("Diff bioconc (log(Pred) - log(Obs))")+
+  xlab("% Diet uptake")
+
+```
+
+### Key take aways for each ecosystem
+
+```{r PART 6 key figure, fig.width=6, fig.height=3.5}
+# read in the original data (trophic transfer, median values)
+d_fw<-read.csv(here("Data/Model_pred_AllSystems_trophicTrans_medVals.csv"))
+d_fw<-d_fw[, c("SppAlias", "PFAA", "System", "WB", "Obs_logngkg", "log_ngkg_re")]
+colnames(d_fw)[5:6] <- paste(colnames(d_fw[5:6]), "main",  sep = '_')
+d_fw$PFAA_Sys_Spp<-paste(d_fw$PFAA, d_fw$System, d_fw$SppAlias, sep = "_")
+
+# same day values
+AllDataJBAsp_fw_inv$System<-"JBA-spring"
+AllDataJBAsum_fw_inv$System<-"JBA-summer"
+AllDataWG_fw_inv$System<-"Willow Grove"
+
+d<-rbind(AllDataJBAsp_fw_inv, AllDataJBAsum_fw_inv, AllDataWG_fw_inv)
+d$PFAA_Sys_Spp<-paste(d$PFAA, d$System, d$SppAlias, sep = "_")
+
+d<-merge(d, d_fw[, c("PFAA_Sys_Spp", "log_ngkg_re_main", "Obs_logngkg_main")], by = "PFAA_Sys_Spp", all.x = TRUE)
+
+d$System<-as.factor(d$System)
+
+p1<-ggplot(data = d, aes(x = log_ngkg_re, y = Obs_logngkg,
+                         fill = PFAA,color = PFAA,
+                         shape = System))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y, fill = NULL, shape = NULL),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1,  fill = NULL,shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2,  fill = NULL,shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3,  fill = NULL,shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4,  fill = NULL, shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_point(size = 2,  alpha = 1, stroke = 0.1)+
+    # facet_grid(.~System)+
+    annotate(geom = "text", label = "Trophic Transfer PFAA \nMedian val \nInverts included", 
+             x = 1, y = 6.5 , hjust = 0)+  
+    scale_shape_manual(values = c(22, 21, 23))+
+    theme_bw()+
+    scale_fill_manual(values = PFAA_cols, breaks = PFAS_List)+
+    scale_color_manual(values = PFAA_cols, breaks = PFAS_List)+
+    coord_cartesian(ylim = c(1,7), xlim = c(1,7))
+
+ggformat(p1, y_title = ('Measured log PFAS (ng/kg)'), x_title = 'Modeled log PFAS (ng/kg)', size_text = 12, print = F, title = '')
+p1<-p1+theme(legend.position = "right", 
+             axis.title.x = element_blank())
+ggsave(filename = here("./Figures/All_addingInverts.png"), width = 5, height = 3.5)
+
+```
+
+
+```{r PART 6 key figure antoher, fig.width=8, fig.height=4}
+# inverts only
+p2<-ggformat(ggplot(data = d, 
+       aes(x = PFAA, y = log_ngkg_re,
+           shape = System,
+          color = PFAA,
+          fill = PFAA,
+          group = interaction(System, PFAA)))+
+    geom_boxplot(width = 0.4, alpha = 0.4)+
+    # geom_boxplot(width = 0.4,
+    #              data = d[!c(d$SppAlias == "Ins" | d$SppAlias == "Wor" | d$SppAlias == "Zpl"), ], aes(fill = NULL),  position = position_nudge(x = 0.5))+
+    geom_point( pch=19)+
+    # geom_point(data = d[!c(d$SppAlias == "Ins" | d$SppAlias == "Wor" | d$SppAlias == "Zpl"), ], position = position_nudge(x = 0.5), pch = 1)+
+    scale_color_manual(values = PFAA_cols, breaks = PFAS_List)+
+    scale_fill_manual(values = PFAA_cols, breaks = PFAS_List)+
+      facet_grid(.~System),
+    y_title = "PFAA conc. (log ng/kg)", x_title = "", size_text = 10, print = F)
+p2<-p2+theme(legend.position = "none", 
+             axis.text.x = element_text(angle = 45, size = 5))
+
+
+# merged data set - whats the difference
+p3.0<-ggplot(d[!c(d$SppAlias == "Ins" |
+           d$SppAlias == "Wor" |
+           d$SppAlias == "Zpl" |
+           d$SppAlias == "Cru") & !d$PFAA == "PFUA",],
+       aes(y = Obs_logngkg - log_ngkg_re , x = System, 
+              color = PFAA,
+              fill = PFAA, 
+              shape = System))+
+  geom_point()+
+  geom_point(d[!c(d$SppAlias == "Ins" |
+           d$SppAlias == "Wor" |
+           d$SppAlias == "Zpl" |
+           d$SppAlias == "Cru") & !d$PFAA == "PFUA",],
+       mapping = aes(y = Obs_logngkg - log_ngkg_re_main , x = System, 
+              color = PFAA,
+              fill = PFAA, 
+              shape = System), pch = 21, fill = NA, 
+       position = position_nudge(x = 0.5))+
+  geom_boxplot(d[!c(d$SppAlias == "Ins" |
+           d$SppAlias == "Wor" |
+           d$SppAlias == "Zpl" |
+           d$SppAlias == "Cru") & !d$PFAA == "PFUA",],
+       mapping = aes(y = Obs_logngkg - log_ngkg_re_main , x = System, 
+              color = PFAA,
+              fill = PFAA, 
+              shape = System), fill = NA,
+       position = position_nudge(x = 0.5), width = 0.5, 
+       outliers  = FALSE)+
+  geom_boxplot(alpha = 0.5, width = 0.5)+
+  scale_color_manual(values = PFAA_cols, breaks = PFAS_List)+
+  scale_fill_manual(values = PFAA_cols, breaks = PFAS_List)+
+  facet_grid(.~PFAA)+
+  scale_shape_manual(values = c(22, 21, 23))
+
+
+d_wide<-melt(d[, c("PFAA_Sys_Spp", "SppAlias","PFAA", "System",
+           "Obs_logngkg", "log_ngkg_re_main",
+           "log_ngkg_re")],
+           id.vars = c("PFAA_Sys_Spp", "SppAlias","PFAA", "System"),
+           variable.name = "model_run")
+
+d_wide$variable<-factor(d_wide$variable, levels = c("log_ngkg_re",
+                                        "Obs_logngkg",
+                                        "log_ngkg_re_main"))
+
+p3<-ggplot(d_wide, aes(x = variable, y = value, 
+                   group = PFAA_Sys_Spp,
+                   color = PFAA))+
+  geom_point()+
+  facet_grid(.~System)+
+  geom_line(linewidth = 0.1)+
+  scale_color_manual(values = PFAA_cols, breaks = PFAS_List)+
+  scale_fill_manual(values = PFAA_cols, breaks = PFAS_List)+
+  scale_x_discrete(labels=c("w Inv"," Obs", "wo Metab"))
+ggformat(p3, y_title = "PFAS conc. (log ng/kg)", x_title = "", 
+         size_text = 12, print = T)
+
+# cowplot::plot_grid(p1, p3,  nrow = 2, labels = "AUTO")
+ggsave(height = 3.5, width = 8, filename = here("Figures/Comparison_inverts.png"))
+
+```
+
+
+#### Error estimates and model bias
+
+```{r error estimates MB all systems together}
+
+jba_sum1_mb_fw<-as.data.frame(jba_sum1_error_fw_inv[[1]])
+jba_sum1_mb_fw$System <- "JBA-summer"
+jba_sp1_mb_fw<-as.data.frame(jba_sp1_error_fw_inv[[1]])
+jba_sp1_mb_fw$System <- "JBA-spring"
+wg1_mb_fw<-as.data.frame(wg1_error_fw_inv[[1]])
+wg1_mb_fw$System <- "Willow Grove"
+
+colnames(jba_sum1_mb_fw)<-c( "MB", "System")
+colnames(jba_sp1_mb_fw)<-c( "MB", "System")
+colnames(wg1_mb_fw)<-c( "MB", "System")
+
+d_err_fw<-rbind(jba_sum1_mb_fw, jba_sp1_mb_fw, wg1_mb_fw)
+d_err_fw$Model<-"trophic transfer"
+d_err_fw$`Data type`<-"median values"
+
+jba_sum_pfaa_er_fw<-as.data.frame(jba_sum1_error_fw_inv[[5]]) 
+jba_sp_pfaa_er_fw<-as.data.frame(jba_sp1_error_fw_inv[[5]]) 
+wg_pfaa_er_fw<-as.data.frame(wg1_error_fw_inv[[5]]) 
+jba_sum_pfaa_er_fw$System<- "JBA-summer"
+jba_sp_pfaa_er_fw$System<- "JBA-spring"
+wg_pfaa_er_fw$System<- "Willow Grove"
+jba_sum_pfaa_er_fw$Model<- "trophic transfer"
+jba_sp_pfaa_er_fw$Model<- "trophic transfer"
+wg_pfaa_er_fw$Model<- "trophic transfer"
+jba_sum_pfaa_er_fw$`Data type`<- "median values"
+jba_sp_pfaa_er_fw$`Data type`<- "median values"
+wg_pfaa_er_fw$`Data type`<- "median values"
+
+d_pfaa_er_fw_inv<-rbind(wg_pfaa_er_fw, jba_sum_pfaa_er_fw, jba_sp_pfaa_er_fw) # median vals, trophic transfer, 
+
+err_data_inv<- d_err_fw # median values 
+
+# display tables
+err_data_inv %>%
+  pivot_wider(names_from = Model, values_from = MB) %>% 
+  kbl(digits = 2, caption = "Table 1: Average model bias, with inverts") %>%
+kable_classic(full_width = F, html_font = "Verdana")
+
+
+d_pfaa_er_fw_inv %>%
+  pivot_wider(names_from = PFAA,
+              values_from = MBavg) %>% 
+  kbl(digits = 2, caption = "Table 2: Average model bias by PFAA, with inverts") %>%
+  kable_classic(full_width = F, html_font = "Verdana")
+
+```
+<br/> <br/>

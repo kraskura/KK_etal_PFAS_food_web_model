@@ -78,9 +78,10 @@ SSC_B<-function(settings,
      ############################################### *
     
     if (settings$chooseModel == "Sun_etal_2022"){
-      C_B = ((k_1 * (org$m_O * chemdata$Phi * chemdata$C_WTO + (1 - org$m_O) * C_WDP) +
-              k_D * (sum(P * as.numeric(unlist(C_D))) + (Pd * chemdata$C_s))) /
+      C_B = (( (k_1 * (org$m_O * chemdata$Phi * chemdata$C_WTO + (1 - org$m_O) * C_WDP))  +
+              (k_D * (sum(P * as.numeric(unlist(C_D))) + (Pd * chemdata$C_s))) ) /
               (k_2 + k_E + k_M + k_G + k_R_est))
+
     }else if(settings$chooseModel == "Liang_etal_2022"){
       C_B = (k_1 * chemdata$C_WTO) + 
             (k_D * (sum(P * as.numeric(unlist(C_D)))))
@@ -115,10 +116,12 @@ SSC_B<-function(settings,
     
     FeedRate = G_D / org$W_B
     
+              # ((k_1 * (org$m_O * chemdata$Phi * chemdata$C_WTO + (1 - org$m_O) * C_WDP) 
     Gill_uptake = k_1 * (org$m_O * chemdata$Phi * chemdata$C_WTO + (1 - org$m_O) * C_WDP) # L/kg*d * ng/mL (or g/L) = g chemical/kg fish/day
     # Dietary_uptake = k_D * (sum(P * t(C_D)) + (Pd * chemdata$C_s)) # kg food/kg org * ng/g (or g/kg food) = g chemical/kg fish/day
     
     # split up sediment and diet 
+                   # k_D * (sum(P * as.numeric(unlist(C_D))) + (Pd * chemdata$C_s)))
     Dietary_uptake = k_D * (sum(P * t(C_D))) # kg food/kg org * ng/g (or g/kg food) = g chemical/kg fish/day
     Sediment_uptake = k_D * (Pd * chemdata$C_s) # kg food/kg org * ng/g (or g/kg food) = g chemical/kg fish/day
 
@@ -126,7 +129,7 @@ SSC_B<-function(settings,
     Gill_uppct = Gill_uptake / Uptake
     Diet_uppct = Dietary_uptake / Uptake
     Sediment_uppct = Sediment_uptake / Uptake
-    TotalElim_rate = (k_2 + k_E + k_M + k_G)
+    TotalElim_rate = (k_2 + k_E + k_M + k_G + k_R_est)  
     # *************** Organism specific chemical uptake ***********
 
     NL_pct = (org$nu_NB * D_OW) / D_BW
@@ -138,7 +141,7 @@ SSC_B<-function(settings,
     kr_pct = k_R_est / (k_2 + k_E + k_G + k_R_est)
 
     Output_Data = t(as.data.frame(c("C_B" = C_B,
-                                  'mO' = org$m_O, # here here mistake?
+                                  'mO' = org$m_O, 
                                   'Phi' = chemdata$Phi,
                                   'C_WTO' = chemdata$C_WTO,
                                   'C_WDP' = C_WDP,

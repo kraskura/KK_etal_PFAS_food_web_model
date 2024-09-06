@@ -1,0 +1,1004 @@
+---
+title: "Food web grid search and metabolism"
+author: "Krista Kraskura"
+date: "`r Sys.Date()`"
+output: 
+  # pdf_document:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    toc_depth: 4
+    theme: journal
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, fig.align = "center")
+```
+
+```{r source, warning=FALSE, message=FALSE, echo=FALSE}
+
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(reshape)
+library(tibble) # needed to get named list of dataframes (in data_tables.R)
+library(readxl)
+library(ggformat2)
+library(tictoc)
+library(ggalt)
+library(ggridges)
+
+library(here)
+here::i_am(path = "./Code/R results/sensitiv_food_web_and_metabolism.Rmd")
+# here()
+
+# functions to run food web model
+source(here("Code", "R model", "PFAS_bioaccum_v2.R"))
+source(here("Code", "R model", "PFAS_classes_v2.R"))
+source(here("Code", "R model", "PFAS_steadyState_v2.R"))
+source(here("Code", "R model", "runEcosystemModels.R")) # custom written
+source(here("Code", "R model", "runErrorEstimates.R")) # custom written 
+source(here("Code", "R model", "data_tables.R"))
+
+# source("../Code/PFAS_tissuePart_v2.R")
+
+# source data tables for each objective
+kRTable = read.csv(here("Data", 'export_krTable.csv'), row.names = "X", header = T)
+colnames(kRTable)<-c("kr/kb", "PFAA", "chemID")
+
+PFAS_List <- c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA')
+PFAS_labels <- c('C6 PFSA','C8 PFSA','C8 PFCA', 'C9 PFCA','C10 PFCA','C11 PFCA')
+PFAA_cols <- c('PFHxS' = '#332288', # 
+             'PFOS' = '#882255', # 
+             'PFOA' = '#117733',
+             'PFNA' = '#88CCEE',
+             'PFDA' = 'orange',
+             'PFUA' = '#AA4499')
+
+p_lines <- data.frame('x' = c(0, 7),
+                      'y' = c(0, 7))
+p_lines$y1 <- p_lines$x-1
+p_lines$y2 <- p_lines$x+1
+p_lines$y3 <- p_lines$x-log10(2)
+p_lines$y4 <- p_lines$x+log10(2)
+
+```
+
+
+1. One limitation in this study, is the unknown/estimated food web:
+
+**Question:** how sensitive model predictions are to changes in the food web
+
+**Solution:** perform grid search to modulate food web to see the effects 
+
+2. Sun et al 2022 found that model outputs were the most sensitive to changes in:
+
+- ventilation rate
+- feeding rate
+- aqueous chemical transfer efficiency % 
+- dietary chemical transfer efficiency % 
+
+**Problem:** these parameters could be species specific, but the empirical data are scarce. 
+Additionally, Sun et al 2022 presents that benthic fish are more sensitive to exclusion 
+of dietary PFAS uptake. Benthic fish also tend to have lower metabolism, and therefore,
+their proportional gill uptake may be lower. 
+
+**Question:** Does species specific metabolism improve the model output? if yes, how much better?
+
+**Solution:** run the model with species specific RMR values obtained from fishbase.org and other sources. 
+
+3. What are the key parameters that field monitoring could focus on to obtain the most reliable PFAS predictions. 
+
+
+### PART 1: Food web grid search:
+
+```{r sensitiviy for the foodweb Willow Grove, eval=FALSE}
+
+source(here("Code", "R data tables", "WG.R")) # mean data across time / not same day
+WG_inputFiles_list<-inputFiles_list
+WG_inputFiles_list$foodWebData
+
+# PFAS in each diet item are calculated from trophic transfer
+settings_modelDiet = new_Settings(
+  chooseDiet = 'default',
+  chooseKoc = 'Koc'
+)
+
+# results run on May 19
+# with range 0, 1 and increment 0.1.
+# run iterations (stopped there): 17139 
+# move on using 0.2 incerments. 
+# don't change phytoplankton
+interval<-0.2
+range<-seq(0, 1, interval)
+
+counter<-0
+remove(AllDataWG_gridSearch)
+remove(foodWeb_gridSearch)
+
+tic(msg = "WG grid search loop")
+for(i in 1:length(range)){
+  Pry_Sed<-range[i]
+  for (i2 in 1:length(range)){
+    Pry_Phy<-range[i2]
+      for(i3 in 1:length(range)){
+        Bgl_Sed<-range[i3]
+          for (i4 in 1:length(range)){
+            Bgl_Phy<-range[i4]
+                for(i5 in 1:length(range)){
+                  Bgl_Pry<-range[i5]
+                    for (i6 in 1:length(range)){
+                      Bas_Sed<-range[i6]
+                        for (i7 in 1:length(range)){
+                          Bas_Phy<-range[i7]
+                            for (i8 in 1:length(range)){
+                              Bas_Pry<-range[i8]
+                                for (i9 in 1:length(range)){
+                                  Bas_Bgl<-range[i9]
+                                  
+                                  row2<-Pry_Sed+Pry_Phy
+                                  row3<-Bgl_Sed+Bgl_Phy+Bgl_Pry
+                                  row4<-Bas_Sed+Bas_Phy+Bas_Pry+Bas_Bgl
+                                  
+                                  if(row2 == 1 & row3 == 1 & row4 ==1){
+                                    WG_inputFiles_list$foodWebData[2,1] <- Pry_Sed
+                                    WG_inputFiles_list$foodWebData[3,1] <- Bgl_Sed
+                                    WG_inputFiles_list$foodWebData[4,1] <- Bas_Sed
+                                    WG_inputFiles_list$foodWebData[2,2] <- Pry_Phy
+                                    WG_inputFiles_list$foodWebData[3,2] <- Bgl_Phy
+                                    WG_inputFiles_list$foodWebData[4,2] <- Bas_Phy
+                                    WG_inputFiles_list$foodWebData[3,3] <- Bgl_Pry
+                                    WG_inputFiles_list$foodWebData[4,3] <- Bas_Pry
+                                    WG_inputFiles_list$foodWebData[4,4] <- Bas_Bgl
+                                    inputFiles_list<-WG_inputFiles_list
+                                    
+                                    # run the bioaccumulation model:
+                                  AllDataWG<-runEcosystemModel(settings = settings_modelDiet,
+                                          inputFiles_list = inputFiles_list,
+                                          parameterList = c('C_B','C_WTO','C_s',
+                                                            'k1','k2','ke','kg','kd', 'kr_est',
+                                                            'Total Elimination', 'RMR',
+                                                            "Gill_uptake","Dietary_uptake",
+                                                            "Sediment_uptake",
+                                                            "Gill_up%", "Diet_up%", 'Sed_up%',
+                                                            "G_V", "G_D"),
+                                          PFAA_List = c('PFHxS','PFOS','PFOA','PFNA','PFDA','PFUA'),
+                                          dietData = inputFiles_list$dietData,
+                                          kRTable = kRTable,
+                                          min_diet_WTO_C_s = TRUE,
+                                          min_dietData = inputFiles_list$min_dietData,
+                                          max_diet_WTO_C_s = TRUE, 
+                                          max_dietData = inputFiles_list$max_dietData)
+                                    counter<-counter+1
+                                    AllDataWG$runID<-counter
+                                    print(counter)
+                                                                          
+                                    foodWeb_counter<-data.frame(fw_loc = c("Pry_Sed", "Pry_Phy",
+                                                                                "Bgl_Sed", "Bgl_Phy", 
+                                                                                "Bgl_Pry", "Bas_Sed",
+                                                                                "Bas_Phy", "Bas_Pry",
+                                                                                "Bas_Bgl"), 
+                                                                     fw_val = c(Pry_Sed, Pry_Phy,
+                                                                                Bgl_Sed, Bgl_Phy,
+                                                                                Bgl_Pry, Bas_Sed,
+                                                                                Bas_Phy, Bas_Pry, 
+                                                                                Bas_Bgl), 
+                                                                     runID = counter) 
+                                      
+                                    if(exists("AllDataWG_gridSearch")){
+                                      AllDataWG_gridSearch<-rbind(AllDataWG_gridSearch, AllDataWG)      
+                                      foodWeb_gridSearch<-rbind(foodWeb_gridSearch, foodWeb_counter)
+                                    }else{
+                                      AllDataWG_gridSearch<-AllDataWG
+                                      foodWeb_gridSearch<-foodWeb_counter
+                                    }
+                                  }
+                                }                                        
+                            }                          
+                        }                      
+                    }
+                }
+          }
+      }
+    
+  }
+}
+toc()
+
+
+# results run on May 19
+# with range 0, 1 and increment 0.1.
+# run iterations (stopped there): 17139 
+# move on using 0.2 incerments. 
+
+str(AllDataWG_gridSearch)
+write.csv(x = AllDataWG_gridSearch, file = here("Data/outputs/AllDataWG_gridSearch_range0_1_incr0_2_iter7056.csv"), row.names = FALSE)
+
+write.csv(x = foodWeb_gridSearch, file = here("Data/outputs/foodWeb_gridSearch_range0_1_incr0_2_iter7056.csv"), row.names = FALSE)
+
+# write.csv(x = AllDataWG_gridSearch,
+#           file = here("Data/outputs/AllDataWG_gridSearch_range0_1_incr0_5_aug15.csv"),
+#           row.names = FALSE)
+# 
+# write.csv(x = foodWeb_gridSearch,
+#           file = here("Data/outputs/foodWeb_gridSearch_range0_1_incr0_5_aug15.csv"),
+#           row.names = FALSE)
+
+```
+
+```{r read in previosuly run data}
+
+AllDataWG_gridSearch<-read.csv(here("Data/outputs/AllDataWG_gridSearch_range0_1_incr0_2_iter7056.csv"))
+foodWeb_gridSearch<-read.csv(here("Data/outputs/foodWeb_gridSearch_range0_1_incr0_2_iter7056.csv"))
+names(AllDataWG_gridSearch) <- gsub(x = names(AllDataWG_gridSearch), pattern = "up.", replacement = "up%")  
+
+```
+
+```{r figure all outputs, eval = FALSE}
+
+AllDataWG_gridSearch<-AllDataWG_gridSearch %>% 
+  filter((PFAA == "PFOS" | PFAA == "PFOA" | PFAA == "PFHxS" | PFAA == "PFNA") & 
+           !SppAlias == "Phy")
+
+ggplot(AllDataWG_gridSearch,
+       aes(x = runID, y = Obs_logngkg - log_ngkg_re, 
+                                 color = `Gill_up%`))+
+  geom_point(pch = 19, size = 0.1, alpha=0.4)+
+  facet_grid(SppAlias~PFAA)+
+  theme_bw()+
+  geom_hline(yintercept = 0)+
+  scale_color_viridis_c()
+
+```
+
+```{r model bias calc}
+AllDataWG_gridSearch$mb_avg<-NA
+AllDataWG_gridSearch$mb_cv<-NA
+AllDataWG_gridSearch$r2<-NA
+AllDataWG_gridSearch$mb_avg_pct<-NA
+
+split_data<-split(x = AllDataWG_gridSearch, f = as.factor(AllDataWG_gridSearch$runID))
+
+for (i in 1:length(split_data)){
+  
+  data0<-data.frame(split_data[i])
+  colnames(data0)<-colnames(AllDataWG_gridSearch)
+  mb_run<-estimate_error(MetricData = data0,
+                         DataID = data0$runID,
+                         verbose = FALSE)
+  mb0<-mb_run[[1]]
+  mbcv0<-mb_run[[2]]
+  r20<-mb_run[[3]]
+  mbpct0<-mb_run[[6]]
+
+  AllDataWG_gridSearch[which(AllDataWG_gridSearch$runID ==
+                               data0$runID[1]),"mb_avg"]<-mb0
+  AllDataWG_gridSearch[which(AllDataWG_gridSearch$runID ==
+                               data0$runID[1]),"mb_cv"]<-mbcv0
+  AllDataWG_gridSearch[which(AllDataWG_gridSearch$runID ==
+                               data0$runID[1]),"r2"]<-r20 
+  AllDataWG_gridSearch[which(AllDataWG_gridSearch$runID ==
+                               data0$runID[1]),"mb_avg_pct"]<-mbpct0
+}
+```
+
+```{r SERDP project chunk 1}
+best_fw_runID_mod_avg<-AllDataWG_gridSearch[which(AllDataWG_gridSearch$mb_avg == 
+                                           max(AllDataWG_gridSearch$mb_avg, na.rm = T)), "runID"][1]
+best_fw_runID_r2<-AllDataWG_gridSearch[which(AllDataWG_gridSearch$r2 == 
+                                           max(AllDataWG_gridSearch$r2, na.rm = T)), "runID"][1]
+
+
+paste("Best MBavg from grid search:", round(max(AllDataWG_gridSearch$mb_avg, na.rm = T), 3))
+
+# best model WG plot 
+p1<-ggplot(data = AllDataWG_gridSearch[which(AllDataWG_gridSearch$runID == 
+                                           best_fw_runID_r2),],
+       aes(x = log_ngkg_re, y = Obs_logngkg, fill = PFAA, color = PFAA))+
+    geom_point(data = AllDataWG_gridSearch[which(AllDataWG_gridSearch$runID == 
+                                           best_fw_runID_mod_avg),],
+       aes(x = log_ngkg_re, y = Obs_logngkg, fill = PFAA, color = PFAA), pch=19,
+       size = 3,
+       stroke = 0.5, alpha = 1)+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y, fill = NULL),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1, fill = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2, fill = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3, fill = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4, fill = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    # geom_point(pch = 18, size = 3, stroke = 0.5, alpha = 0.5)+
+    theme_bw()+
+    scale_fill_manual(values = PFAA_cols)+
+    scale_color_manual(values = PFAA_cols)+
+    annotate(geom = "text", label = "Trophic transfer of PFAA \nMedian values \nBest Prediction", 
+             x = 0, y = 6.5 , hjust = 0)
+
+ggformat(p1, y_title = 'Modeled log PFAA (ng/kg)', x_title = 'Observed log PFAA (ng/kg)', 
+        size_text = 12)
+p1<-p1+theme(legend.position = "none")
+```
+
+
+```{r PART 4 SERDP project actual best food web}
+# table
+best_fw_data<-foodWeb_gridSearch[which(foodWeb_gridSearch$runID == best_fw_runID_mod_avg), ]
+best_fw_data<-spread(best_fw_data , key = fw_loc, value = fw_val)
+
+foodWeb<-list(
+Phy = c(1,0,0,0,0),
+Pry = c(best_fw_data[1, "Pry_Sed"], best_fw_data[1, "Pry_Phy"], 0,0,0),
+Bgl = c(best_fw_data[1, "Bgl_Sed"], best_fw_data[1, "Bgl_Phy"], best_fw_data[1, "Bgl_Pry"],0,0),
+Bas = c(best_fw_data[1, "Bas_Sed"], best_fw_data[1, "Bas_Phy"], best_fw_data[1, "Bas_Pry"],best_fw_data[1, "Bas_Bgl"], 0)
+)
+for (i in 1:length(foodWeb)){
+  if( i == 1){
+    foodWebData<-foodWeb[[1]]
+  }else{
+    foodWebData<-rbind(foodWebData, foodWeb[[i]])
+  }
+}
+rownames(foodWebData)<-names(foodWeb)
+colnames(foodWebData)<-c("Sed", names( foodWeb))
+
+foodWebData%>% 
+  kbl(digits = 2, caption = "Table 1: Average model bias") %>%
+kable_classic(full_width = F, html_font = "Verdana")
+
+```
+
+
+```{r PART 4 SERDP project chunk 2 SAVED}
+# density histograms pred- obs values gridsearch
+p2<-ggplot(AllDataWG_gridSearch,
+        aes(x = log_ngkg_re, fill = PFAA, color = NULL))+
+        geom_density(color=NA)+
+        scale_fill_manual(values = PFAA_cols)+
+        facet_grid(SppAlias~PFAA, scale = "free")+
+        # geom_vline(xintercept = 0, linetype = 1)+
+        # lims(x = c(-1.52, 1.52))+
+        theme_bw()+
+  ylab("Density Distribution")+
+  xlab("Pred conc. log(ng/kg)")+
+  theme(legend.position = "none")
+
+# histogram of all model bias (avg) 
+p3<-ggformat(
+  plot = ggplot(AllDataWG_gridSearch[!duplicated(AllDataWG_gridSearch$mb_avg),],
+        aes(x = mb_avg, color = NULL))+
+        geom_histogram(bins =100, color=NA)+
+        scale_fill_manual(values = PFAA_cols)+
+        geom_vline(xintercept = 1, linetype = 1)+
+        geom_vline(xintercept = 1.144, linetype = "dashed")+
+        theme_bw(),
+  y_title = "Count", x_title = "Model Bias (avg)", size_text = 12)
+
+
+```
+
+```{r function density historgrams}
+
+for (i in 1:length(PFAS_List)){
+  
+  if(PFAS_List[i] == "PFUA" ){
+    next
+  }
+  # used data (A) is with predictions using trophic transfer estimates
+  AllDataWG_gridSearch.0<-(AllDataWG_gridSearch[AllDataWG_gridSearch$PFAA == PFAS_List[i] & !c(AllDataWG_gridSearch$SppAlias == "Phy") ,])
+  
+  plot <- ggplot(data = AllDataWG_gridSearch.0,
+                 aes(x = log_ngkg_re,
+                                 y = SppAlias,
+                                 group = SppAlias,
+                                 fill= PFAA, 
+                                 color = PFAA))+
+    geom_density_ridges(bins = 100, alpha = 0.8,
+                        scale = 0.9,
+                        rel_min_height = 0.01)+
+    scale_fill_manual(name=" ", values = PFAA_cols)+
+    scale_color_manual(name=" ", values = PFAA_cols)+
+    # geom_vline(xintercept = 0)+
+    theme_minimal()+
+    guides(fill = guide_legend(nrow = 3, byrow = T)) +
+    theme(legend.direction = "vertical", legend.box = "vertical")+
+    theme(axis.text.x = element_text(size = 7), 
+          axis.title.y = element_blank())+
+    xlab("Pred conc. log(ng/kg)")
+          # axis.title.x = element_blank())
+  
+
+  # summary stats AllDataWG_gridSearch.3 is a summary table for AllDataWG_gridSearch.0 (output table for known diet)
+  AllDataWG_gridSearch.3 <- AllDataWG_gridSearch.0 %>%
+          group_by(SppAlias, PFAA) %>%
+          summarise(mean_val = mean(Obs_logngkg, na.rm = TRUE),
+                    mean_errUP = max(Obs_logngkg, na.rm = TRUE),
+                    mean_errLO = min(Obs_logngkg, na.rm = TRUE),
+                    mean_val2 = mean(log_ngkg_re, na.rm = TRUE),
+                    max_val2 = max(log_ngkg_re, na.rm = TRUE),
+                    min_val2 = min(log_ngkg_re, na.rm = TRUE))
+  
+  plot2 <-
+    ggplot(data = AllDataWG_gridSearch.0,
+           aes(x = log_ngkg_re,
+                      y = SppAlias,
+                      color = PFAA, fill = PFAA))+
+    # geom_density_ridges(stat = "binline", bins = 100, scale = 0.95, draw_baseline = FALSE)+
+    geom_errorbarh(data = AllDataWG_gridSearch.3[!c(AllDataWG_gridSearch.3$SppAlias == "Phy"),],
+          mapping = aes(x = mean_val, xmax = mean_errUP, xmin = mean_errLO, color = PFAA),
+          height = 0.2, color = "black")+
+    geom_density_ridges( draw_baseline = FALSE, alpha = 0.8,
+                         scale = 0.9,
+                         rel_min_height = 0.01)+
+    # xlim(1, 7)+
+    scale_fill_manual(name=" ", values = PFAA_cols)+
+    scale_color_manual(name=" ", values = PFAA_cols)+
+    theme_minimal()+
+    guides(fill = guide_legend(nrow = 2, byrow = T)) +
+    theme(legend.direction = "vertical", legend.box = "vertical")+
+    theme(axis.text.x = element_text(size = 7), 
+          axis.title.y = element_blank())+
+    xlab("Tissue bioconcentrations")
+          
+          # axis.title.x = element_blank())
+    
+  assign(paste("p_", PFAS_List[i], sep = ""), plot)
+  assign(paste("p2_", PFAS_List[i], sep = ""), plot2)
+ 
+}
+p_PFOS
+p2_PFOS
+
+```
+
+### Error estimated for modeled diet
+
+```{r search grid part mb hist, fig.height = 9, fig.width=6, eval = T, fig.cap="Figure 1."}
+
+p_PFHxS<-p_PFHxS+theme(axis.title.x = element_blank(), legend.position = "none")
+p_PFOS<-p_PFOS+theme(axis.title.x = element_blank(), legend.position = "none", 
+                     strip.background = element_blank(), strip.text.x = element_blank())
+p_PFNA<-p_PFNA+theme(axis.title.x = element_blank(), legend.position = "none", 
+                     strip.background = element_blank(), strip.text.x = element_blank())
+p_PFOA<-p_PFOA+theme( legend.position = "none", strip.background = element_blank(), strip.text.x = element_blank())
+
+ridgeplot<-cowplot::plot_grid(p_PFHxS,
+                   p_PFOS ,
+                   p_PFNA ,
+                   p_PFOA , 
+                   # p_PFDA + theme(legend.position = "none"), # "PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA"
+                    labels = c("PFHxS", "PFOS", "PFNA",
+                                      "PFOA", ""),
+                   label_size = 10,
+                   label_x = c(0.8),
+                   label_y = c(0.83, 0.83, 0.83, 0.83),
+                   nrow = 4, ncol = 1)
+# ggsave(height = 8, width = 6, filename = here("Figures/Figure7_part4.png"))
+
+cowplot::plot_grid(ridgeplot, p3,
+                   ncol = 2, nrow = 1,
+                   align = "v",
+                   labels = c("A", "B"))
+ggsave(height = 4.5, width = 8, filename = here("Figures/FooWebSims.png"))
+
+
+```
+
+The difference between model estimated PFAA value and observed (empirically measured values) for each PFAA, species, and in each system. The vertical line at 0 indicates "perfect" agreement between measured and modeled values. The density plots compile model results originated from taking 1000 random draws of realistically measurable values in each system (the randomly selected values include: water, sediment, and species tissue PFAA concentrations, and water temperature; all other parameters were constant). **Only showing results for model runs where PFAA values in diet were modeled via trophic transfer**
+
+### PART2: Species specific metabolism:
+
+*Species abbrev. : Metabolism mgO2/day
+
+- Pum 110.9264324	
+- Pry	24.81153852	
+- Dac	50.0519863	
+- Swa	19.45794798	
+- Dar	9.8568	
+- Min	11.8656	
+- Mad	23.63965131	
+- Chu	107.98848	
+- Kil	17.77361342	
+- Bas	1081.441999	(adult WG)
+- Fal	18.72309445	
+- Bgl	348.3142029	
+- Bas	85.89386534	(juvie JBA)
+
+
+```{r  set organism RMR data WG}
+source(here("Code", "R data tables", "WG.R")) # median data across time / not same day
+
+# PFAS in each diet item are calculated from trophic transfer
+settings_modelDiet = new_Settings(
+  chooseDiet = 'default',
+  chooseKoc = 'Koc',
+  chooseDmw = "Droge", # default = "Droge", or use "calculated" 
+  chooseEw = "empirical", # default = 'empirical', or use "beta#", where:
+  # must be in format: beta#, #beta [# = numeric var, no spaces, no special char]"
+)
+
+# provide metabolism values mgO2/h
+inputFiles_list$organismData["RMR", "Pry"]<-24.81153852
+inputFiles_list$organismData["RMR", "Bgl"]<-348.3142029
+inputFiles_list$organismData["RMR", "Bas"]<-1081.441999
+
+# run the bioaccumulation model:
+AllDataWG_fw_metab<-runEcosystemModel(settings = settings_modelDiet,
+                inputFiles_list = inputFiles_list,
+                parameterList = c('C_B','C_WTO','C_s','k1',
+                                  'k2','ke','kg','kd','kr_est',
+                                  'Total Elimination', 'RMR',
+                                  "Gill_uptake","Dietary_uptake",
+                                  "Sediment_uptake",
+                                  "Gill_up%", "Diet_up%",
+                                  'Sed_up%',
+                                  "G_V", "G_D"),
+                PFAA_List = c('PFHxS','PFOS',
+                              'PFOA','PFNA','PFDA','PFUA'),
+                dietData = inputFiles_list$dietData,
+                kRTable = kRTable,
+                min_diet_WTO_C_s = TRUE,
+                min_dietData = inputFiles_list$min_dietData,
+                max_diet_WTO_C_s = TRUE,
+                max_dietData = inputFiles_list$max_dietData)
+
+#Robinson et al. equation - incorporates temperature
+inputFiles_list$organismData["RMR", "Pry"]<-0
+inputFiles_list$organismData["RMR", "Bgl"]<-0
+inputFiles_list$organismData["RMR", "Bas"]<-0
+# run the bioaccumulation model:
+AllDataWG2_fw_metab<-runEcosystemModel(settings = settings_modelDiet,
+                inputFiles_list = inputFiles_list,
+                parameterList = c('C_B','C_WTO','C_s','k1',
+                                  'k2','ke','kg','kd','kr_est',
+                                  'Total Elimination', 'RMR',
+                                  "Gill_uptake","Dietary_uptake",
+                                  "Sediment_uptake",
+                                  "Gill_up%", "Diet_up%",
+                                  'Sed_up%',
+                                  "G_V", "G_D"),
+                PFAA_List = c('PFHxS','PFOS',
+                              'PFOA','PFNA','PFDA','PFUA'),
+                dietData = inputFiles_list$dietData,
+                kRTable = kRTable,
+                min_diet_WTO_C_s = TRUE,
+                min_dietData = inputFiles_list$min_dietData,
+                max_diet_WTO_C_s = TRUE,
+                max_dietData = inputFiles_list$max_dietData)
+
+# the standard run; no species specific metabolism
+source(here("Code", "R data tables", "WG.R")) # median data across time / not same day
+# run the bioaccumulation model:
+AllDataWG_fw_null_metab<-runEcosystemModel(settings = settings_modelDiet,
+                inputFiles_list = inputFiles_list,
+                parameterList = c('C_B','C_WTO','C_s','k1',
+                                  'k2','ke','kg','kd','kr_est',
+                                  'Total Elimination', 'RMR',
+                                  "Gill_uptake","Dietary_uptake",
+                                  "Sediment_uptake",
+                                  "Gill_up%", "Diet_up%",
+                                  'Sed_up%',
+                                  "G_V", "G_D"),
+                PFAA_List = c('PFHxS','PFOS',
+                              'PFOA','PFNA','PFDA','PFUA'),
+                dietData = inputFiles_list$dietData,
+                kRTable = kRTable,
+                min_diet_WTO_C_s = TRUE,
+                min_dietData = inputFiles_list$min_dietData,
+                max_diet_WTO_C_s = TRUE,
+                max_dietData = inputFiles_list$max_dietData)
+
+ggplot(data = AllDataWG_fw_metab,
+       aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_point(pch = 21, size = 2)+
+    # geom_point(data = AllDataWG_fw_null,
+    #    aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA), 
+    #    pch = 19, size = 1)+ # the null (standard Sun et al)
+    # geom_point(data = AllDataWG2_fw_metab,
+    #    aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA), 
+    #    pch = 17, size = 1)+ # ventilation volume from Robinson et al
+    theme_bw()+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'Modeled PFAAs in diet: trophic transfer')+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Observed log PFAA (ng/kg)')
+
+# model bias for RMR provided
+wg1_error_fw_metab<-estimate_error(
+  MetricData = AllDataWG_fw_metab,
+  DataID = "WG_species_metab",
+  verbose = F)
+
+# model bias for RMR est following Robinson et al 
+wg1_error_fw_metab_robinson<-estimate_error(
+  MetricData = AllDataWG2_fw_metab,
+  DataID = "WG_rmr_robinson",
+  verbose = F)
+```
+
+```{r set organism RMR data JBA sum}
+source(here("Code", "R data tables", "JBA_summer.R")) # mean data across time / not same day
+
+# # provide metabolism values mgO2/h
+inputFiles_list$organismData["RMR", "Bas"]<-85.89386534
+inputFiles_list$organismData["RMR", "Swa"]<-19.45794798
+inputFiles_list$organismData["RMR", "Dac"]<-50.0519863
+inputFiles_list$organismData["RMR", "Min"]<-11.8656
+inputFiles_list$organismData["RMR", "Fal"]<-18.72309445
+inputFiles_list$organismData["RMR", "Mad"]<-23.63965131
+inputFiles_list$organismData["RMR", "Dar"]<-9.8568
+inputFiles_list$organismData["RMR", "Pum"]<-110.9264324
+
+# run the bioaccumulation model:
+AllDataJBAsum_fw_metab<-runEcosystemModel(settings = settings_modelDiet,
+                inputFiles_list = inputFiles_list,
+                parameterList = c('C_B','C_WTO','C_s','k1',
+                                  'k2','ke','kg','kd','kr_est',
+                                  'Total Elimination', 'RMR',
+                                  "Gill_uptake","Dietary_uptake",
+                                  "Sediment_uptake",
+                                  "Gill_up%", "Diet_up%",
+                                  'Sed_up%',
+                                  "G_V", "G_D"),
+                PFAA_List = c('PFHxS','PFOS',
+                              'PFOA','PFNA','PFDA','PFUA'),
+                dietData = inputFiles_list$dietData,
+                kRTable = kRTable,
+                min_diet_WTO_C_s = TRUE,
+                min_dietData = inputFiles_list$min_dietData,
+                max_diet_WTO_C_s = TRUE,
+                max_dietData = inputFiles_list$max_dietData)
+
+# the standard run
+source(here("Code", "R data tables", "JBA_summer.R")) # mean data across time / not same day
+# run the bioaccumulation model:
+AllDataJBAsum_fw_null_metab<-runEcosystemModel(settings = settings_modelDiet,
+                inputFiles_list = inputFiles_list,
+                parameterList = c('C_B','C_WTO','C_s','k1',
+                                  'k2','ke','kg','kd','kr_est',
+                                  'Total Elimination', 'RMR',
+                                  "Gill_uptake","Dietary_uptake",
+                                  "Sediment_uptake",
+                                  "Gill_up%", "Diet_up%",
+                                  'Sed_up%',
+                                  "G_V", "G_D"),
+                PFAA_List = c('PFHxS','PFOS',
+                              'PFOA','PFNA','PFDA','PFUA'),
+                dietData = inputFiles_list$dietData,
+                kRTable = kRTable,
+                min_diet_WTO_C_s = TRUE,
+                min_dietData = inputFiles_list$min_dietData,
+                max_diet_WTO_C_s = TRUE,
+                max_dietData = inputFiles_list$max_dietData)
+
+
+ggplot(data = AllDataJBAsum_fw_metab,
+       aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_point(pch = 21, size = 2)+
+    # geom_point(data = AllDataJBAsum_null,
+    #    aes(x = log_ngkg_re, y = Obs_logngkg, color = PFAA), 
+    #    pch = 19, size = 1)+
+    theme_bw()+
+    scale_color_manual(values = PFAA_cols)+
+    ggtitle(label = 'Modeled PFAAs in diet: trophic transfer')+
+    xlab('Modeled log PFAA (ng/kg)')+
+    ylab('Observed log PFAA (ng/kg)')
+
+# ggplot(AllDataJBAsum, aes(x = Obs_logngkg - log_ngkg_re,
+#                           y = SppAlias,
+#                           fill = PFAA))+
+#   geom_bar( pch=21, stat = "identity", width = 0.4)+
+#   geom_bar(AllDataJBAsum_null, mapping = aes(x = Obs_logngkg - log_ngkg_re,
+#                           y = SppAlias,
+#                           fill = PFAA), stat = "identity",
+#            pch=19, position = position_nudge(y= -0.3), width = 0.4, alpha = 0.5)+
+#   scale_fill_manual(values = PFAA_cols)+
+#   theme_bw()
+  
+
+jba_sum1_error_fw_metab<-estimate_error(
+  MetricData = AllDataJBAsum_fw_metab,
+  DataID = "JBAsum_species_metab",
+  verbose = F)
+
+
+```
+
+```{r set organism RMR data JBA sp}
+source(here("Code", "R data tables", "JBA_spring.R")) # mean data across time / not same day
+
+# # provide metabolism values
+inputFiles_list$organismData["RMR", "Kil"]<-85.89386534
+inputFiles_list$organismData["RMR", "Swa"]<-19.45794798
+inputFiles_list$organismData["RMR", "Dac"]<-50.0519863
+inputFiles_list$organismData["RMR", "Min"]<-11.8656
+inputFiles_list$organismData["RMR", "Mad"]<-23.63965131
+inputFiles_list$organismData["RMR", "Dar"]<-9.8568
+inputFiles_list$organismData["RMR", "Pum"]<-110.9264324
+inputFiles_list$organismData["RMR", "Chu"]<-107.98848
+
+
+# run the bioaccumulation model:
+AllDataJBAsp_fw_metab<-runEcosystemModel(settings = settings_modelDiet,
+                inputFiles_list = inputFiles_list,
+                parameterList = c('C_B','C_WTO','C_s','k1',
+                                  'k2','ke','kg','kd','kr_est',
+                                  'Total Elimination', 'RMR',
+                                  "Gill_uptake","Dietary_uptake",
+                                  "Sediment_uptake",
+                                  "Gill_up%", "Diet_up%",
+                                  'Sed_up%',
+                                  "G_V", "G_D"),
+                PFAA_List = c('PFHxS','PFOS',
+                              'PFOA','PFNA','PFDA','PFUA'),
+                dietData = inputFiles_list$dietData,
+                kRTable = kRTable,
+                min_diet_WTO_C_s = TRUE,
+                min_dietData = inputFiles_list$min_dietData,
+                max_diet_WTO_C_s = TRUE,
+                max_dietData = inputFiles_list$max_dietData)
+
+
+jba_sp1_error_fw_metab<-estimate_error(
+  MetricData = AllDataJBAsp_fw_metab,
+  DataID = "JBAsp_species_metab",
+  verbose = F)
+
+```
+
+### Error estimates and model bias
+
+```{r error estimates MB all systems together}
+
+jba_sum1_mb_fw<-as.data.frame(jba_sum1_error_fw_metab[[1]])
+jba_sum1_mb_fw$System <- "JBA-summer"
+jba_sp1_mb_fw<-as.data.frame(jba_sp1_error_fw_metab[[1]])
+jba_sp1_mb_fw$System <- "JBA-spring"
+wg1_mb_fw<-as.data.frame(wg1_error_fw_metab[[1]])
+wg1_mb_fw$System <- "Willow Grove"
+
+colnames(jba_sum1_mb_fw)<-c( "MB", "System")
+colnames(jba_sp1_mb_fw)<-c( "MB", "System")
+colnames(wg1_mb_fw)<-c( "MB", "System")
+
+d_err_fw<-rbind(jba_sum1_mb_fw, jba_sp1_mb_fw, wg1_mb_fw)
+d_err_fw$Model<-"trophic transfer"
+d_err_fw$`Data type`<-"median values"
+
+jba_sum_pfaa_er_fw<-as.data.frame(jba_sum1_error_fw_metab[[5]]) 
+jba_sp_pfaa_er_fw<-as.data.frame(jba_sp1_error_fw_metab[[5]]) 
+wg_pfaa_er_fw<-as.data.frame(wg1_error_fw_metab[[5]]) 
+jba_sum_pfaa_er_fw$System<- "JBA-summer"
+jba_sp_pfaa_er_fw$System<- "JBA-spring"
+wg_pfaa_er_fw$System<- "Willow Grove"
+jba_sum_pfaa_er_fw$Model<- "trophic transfer"
+jba_sp_pfaa_er_fw$Model<- "trophic transfer"
+wg_pfaa_er_fw$Model<- "trophic transfer"
+jba_sum_pfaa_er_fw$`Data type`<- "median values"
+jba_sp_pfaa_er_fw$`Data type`<- "median values"
+wg_pfaa_er_fw$`Data type`<- "median values"
+
+d_pfaa_er_fw_metab<-rbind(wg_pfaa_er_fw, jba_sum_pfaa_er_fw, jba_sp_pfaa_er_fw) # median vals, trophic transfer, 
+
+err_data_metab<- d_err_fw # median values 
+
+# display tables
+err_data_metab %>%
+  pivot_wider(names_from = Model, values_from = MB) %>% 
+  kbl(digits = 2, caption = "Table 1: Average model bias, addition of species metabolism") %>%
+kable_classic(full_width = F, html_font = "Verdana")
+
+
+d_pfaa_er_fw_metab %>%
+  pivot_wider(names_from = PFAA,
+              values_from = MBavg) %>% 
+  kbl(digits = 2, caption = "Table 2: Average model bias by PFAA, addition of species metabolism") %>%
+kable_classic(full_width = F, html_font = "Verdana")
+
+```
+<br/> <br/>
+
+```{r PART 7 in SERDP FIGURES report metabolism SAVE}
+# read in the original data (trophic transfer, median values)
+d_fw<-read.csv(here("Data/Model_pred_AllSystems_trophicTrans_medVals.csv"))
+d_fw<-d_fw[, c("SppAlias", "PFAA", "System", "WB", "Obs_logngkg", "log_ngkg_re")]
+colnames(d_fw)[5:6] <- paste(colnames(d_fw[5:6]), "main",  sep = '_')
+d_fw$PFAA_Sys_Spp<-paste(d_fw$PFAA, d_fw$System, d_fw$SppAlias, sep = "_")
+
+# median values, trophic transfer, with metabolism
+AllDataJBAsp_fw_metab$System<-"JBA-spring"
+AllDataJBAsum_fw_metab$System<-"JBA-summer"
+AllDataWG_fw_metab$System<-"Willow Grove"
+
+d<-rbind(AllDataJBAsp_fw_metab, AllDataJBAsum_fw_metab, AllDataWG_fw_metab) # median vals for all recorded sediment and water, with metabolism
+
+# make a new common column for merging ID
+d$PFAA_Sys_Spp<-paste(d$PFAA, d$System, d$SppAlias, sep = "_")
+
+# merge in the original values (trophic transfer, median val)
+d<-merge(d, d_fw[, c("PFAA_Sys_Spp", "log_ngkg_re_main", "Obs_logngkg_main")], by = "PFAA_Sys_Spp", all.x = TRUE)
+
+# median values 
+p1<-ggplot(data = d, aes(x = log_ngkg_re, y = Obs_logngkg,
+                         fill = PFAA,
+                         shape = System))+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y, fill = NULL, shape = NULL),
+              linetype = 1, linewidth = 0.5, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y1,  fill = NULL,shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y2,  fill = NULL,shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y3,  fill = NULL,shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_line(data = p_lines, mapping = aes(x = x, y = y4,  fill = NULL, shape = NULL),
+              linetype = 3, linewidth = 0.2, color = "black")+
+    geom_point(size = 2, color = "black", alpha = 1, stroke = 0.1)+
+    # facet_grid(.~System)+
+    annotate(geom = "text", label = "Trophic transfer of PFAA \nMedian val \nWith Metabolism", 
+             x = 1, y = 6.5 , hjust = 0)+  
+    scale_shape_manual(values = c(22, 21, 23))+
+    theme_bw()+
+    scale_fill_manual(values = PFAA_cols)+
+    scale_color_manual(values = PFAA_cols)+
+    coord_cartesian(ylim = c(1,7), xlim = c(1,7))
+
+ggformat(p1, y_title = ('Measured log PFAS (ng/kg)'), x_title = 'Modeled log PFAS (ng/kg)', size_text = 12, print = T, title = '')
+# p1<-p1+theme(legend.position = "none", 
+#              axis.title.x = element_blank())
+
+ggsave(filename = here("./Figures/All_addingMetab.png"), width = 5, height = 3.5)
+```
+
+
+```{r PART 7 in SERDP FIGURES report metabolism SAVE}
+
+# merged data set - whats the difference
+p3.0<-ggplot(d[!d$PFAA == "PFUA",],
+       aes(y = Obs_logngkg - log_ngkg_re , x = System, 
+              color = PFAA,
+              fill = PFAA, 
+              shape = System))+
+  geom_point()+
+  geom_point(d[!d$PFAA == "PFUA",],
+       mapping = aes(y = Obs_logngkg - log_ngkg_re_main , x = System, 
+              color = PFAA,
+              fill = PFAA, 
+              shape = System), pch = 21, fill = NA, 
+       position = position_nudge(x = 0.5))+
+  geom_boxplot(d[ !d$PFAA == "PFUA",],
+       mapping = aes(y = Obs_logngkg - log_ngkg_re_main , x = System, 
+              color = PFAA,
+              fill = PFAA, 
+              shape = System), fill = NA,
+       position = position_nudge(x = 0.5), width = 0.5, 
+       outliers  = FALSE)+
+  geom_boxplot(alpha = 0.5, width = 0.5)+
+  scale_color_manual(values = PFAA_cols, breaks = PFAS_List)+
+  scale_fill_manual(values = PFAA_cols, breaks = PFAS_List)+
+  facet_grid(.~PFAA)+
+  scale_shape_manual(values = c(22, 21, 23))
+
+
+d_wide<-melt(d[, c("PFAA_Sys_Spp", "SppAlias","PFAA", "System",
+           "Obs_logngkg", "log_ngkg_re_main",
+           "log_ngkg_re")],
+           id.vars = c("PFAA_Sys_Spp", "SppAlias","PFAA", "System"),
+           variable.name = "model_run")
+
+d_wide$variable<-factor(d_wide$variable, levels = c("log_ngkg_re",
+                                        "Obs_logngkg",
+                                        "log_ngkg_re_main"))
+
+p3<-ggplot(d_wide, aes(x = variable, y = value, 
+                   group = PFAA_Sys_Spp,
+                   color = PFAA))+
+  geom_point()+
+  facet_grid(.~System)+
+  geom_line(linewidth = 0.1)+
+  scale_color_manual(values = PFAA_cols, breaks = PFAS_List)+
+  scale_fill_manual(values = PFAA_cols, breaks = PFAS_List)+
+  scale_x_discrete(labels=c("w Metab"," Obs", "wo Metab"))
+ggformat(p3, y_title = "PFAS conc. (log ng/kg)", x_title = "", 
+         size_text = 12, print = T)
+
+# cowplot::plot_grid(p1, p3,  nrow = 2, labels = "AUTO")
+ggsave(height = 3.5, width = 8, filename = here("Figures/Comparison_metab.png"))
+
+```
+
+```{r PART 7 the percent water uptake to the total observed PFAS}
+
+# confirming the calculations:
+# the dietary, gill, and sediment uptake is in ngg
+total_uptake <- d$Dietary_uptake+
+                d$Gill_uptake+
+                d$Sediment_uptake
+all(round(total_uptake / c(d$k2+ d$ke+ d$kg+ d$kr_est), 2) == 
+round(d$C_B_re/1000, 2)) # cb in ng/kg --> turn into ng/g 
+
+d$diet_up_ngg<-d$Dietary_uptake /
+                                 c(d$k2+
+                                     d$ke+
+                                     d$kg+
+                                     d$kr_est)
+d$gill_up_ngg<-d$Gill_uptake /
+                                 c(d$k2+
+                                     d$ke+
+                                     d$kg+
+                                     d$kr_est)
+d$perc_diet_up_ngg<- d$diet_up_ngg / c(d$Obs_ngg) *100
+d$perc_gill_up_ngg<- d$gill_up_ngg / c(d$Obs_ngg) *100
+
+# pivot table 
+mean_d<-d %>%
+dplyr::group_by(PFAA, SppAlias,System) %>%
+summarize(gill_up = mean(gill_up_ngg),
+          diet_up = mean(diet_up_ngg), 
+          obs_up = mean(Obs_ngg)) %>%
+pivot_longer(cols = c(gill_up, diet_up, obs_up), names_to = "Path", values_to = "uptake_ngg")
+
+p1<-ggplot(data = mean_d[c(mean_d$Path == "gill_up" | mean_d$Path == "diet_up") & !c(mean_d$SppAlias == "Phy") & !c(mean_d$PFAA == "PFUA"), ],
+       aes(x = uptake_ngg, fill = PFAA,
+                          y = SppAlias,
+                          alpha = Path))+
+  geom_bar(stat="identity", position = "stack") +
+  geom_bar(data = mean_d[c(mean_d$Path == "obs_up") & !c(mean_d$SppAlias == "Phy") & !c(mean_d$PFAA == "PFUA"), ], 
+           mapping  = aes(x = uptake_ngg, fill = PFAA,
+                          y = SppAlias), stat = "identity", 
+           alpha = 0, color = "black")+
+  theme_bw()+
+  scale_alpha_discrete(range=c(0.4,1), labels = c("Diet", "Gill"))+
+  facet_grid(System~PFAA, scales = "free")+
+  scale_fill_manual(values = PFAA_cols)
+
+
+ggformat(p1,  y_title = "Species", x_title = "PFAS tissue conc. (ng/g)",
+         title = "Trophic transfer - with metabolism", print = T, size_text = 12)
+# ggsave(height = 6.5, width = 9, filename = here("Figures/Figure12_part5.png"))
+
+
+# water uptake only 
+p_water_only<-ggplot(data = mean_d[c(mean_d$Path == "gill_up") &
+                                     !c(mean_d$SppAlias == "Phy") &
+                                          !c(mean_d$PFAA == "PFUA"), ],
+       aes(x = uptake_ngg, fill = PFAA,
+                          y = SppAlias))+
+  geom_bar(stat="identity", position = "stack") +
+  # geom_bar(data = mean_d[c(mean_d$Path == "obs_up") & !c(mean_d$SppAlias == "Phy"), ], 
+           # mapping  = aes(x = uptake_ngg, fill = PFAA,
+           #                y = SppAlias), stat = "identity", 
+           # alpha = 0, color = "black")+
+  theme_bw()+
+  scale_alpha_discrete(range=c(0.4,1), labels = c("Diet", "Gill"))+
+  facet_grid(System~PFAA, scales = "free")+
+  scale_fill_manual(values = PFAA_cols)
+
+```
+

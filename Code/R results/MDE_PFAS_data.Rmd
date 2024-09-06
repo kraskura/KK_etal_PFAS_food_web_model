@@ -49,6 +49,12 @@ d_fish<-read_excel(here("Data/MDE/PFAS_Tissue_2020_21_22.xlsx"), sheet = 1, skip
 
 d_water<-read_excel(here("Data/MDE/PFAS_SurfaceWater_2021_22.xlsx"), sheet = 1, skip = 1)
 
+# water data has a class a whole PFAS sum class, take that out, fix logic later
+d_water_tot<-d_water %>% 
+  filter(`Characteristic Name` == "Per- and polyfluoroalkyl substances")
+d_water<-d_water %>% 
+  filter(!`Characteristic Name` == "Per- and polyfluoroalkyl substances") 
+
 data_loc<-read_excel(here("Data/MDE/locations.xlsx"), sheet = 1)
 data_pfas_names<-read_excel(here("Data/MDE/PFAS_acronyms.xlsx"), sheet = 1)
 data_pfas_names<-data_pfas_names[, 1:2]
@@ -122,11 +128,15 @@ data<-rbind(d_fish[ ,c("Organization_ID","Project_ID", "Activity_ID", "Monitorin
 
 # make all lower case
 data$Characteristic_Name<-tolower(data$Characteristic_Name)
+d_water$Characteristic_Name<-tolower(d_water$Characteristic_Name)
+
 # levels(factor(data$Characteristic_Name))
 
 # pivot wide format data, one line per date per species
 # and add in PFAS abbreviations 
 data<-merge(data, data_pfas_names, by = "Characteristic_Name", all.x = TRUE)
+d_water<-merge(d_water, data_pfas_names, by = "Characteristic_Name", all.x = TRUE)
+
 
 data_w<-data %>% 
   select(-Result_Value_Type, - Detection_Limit_Unit, -Detection_Limit_Value, - Characteristic_Name) %>% 
@@ -182,14 +192,18 @@ d_water<-merge(d_water, data_loc, by = "Monitoring_Location_ID")
 data_tot<-merge(data_tot, data_loc, by = "Monitoring_Location_ID")
 
 # merge PFAS names 
-d_water<-merge(d_water, data_pfas_names, by = "Characteristic_Name", all.x = TRUE)
-data_tot<-merge(data_tot, data_pfas_names, by = "Characteristic_Name", all.x = TRUE)
+# d_water<-merge(d_water, data_pfas_names, by = "Characteristic_Name", all.x = TRUE)
+# data_tot<-merge(data_tot, data_pfas_names, by = "Characteristic_Name", all.x = TRUE)
 
 # percent PFAS
 data_l$pct_PFAS<-data_l$Result_Value/data_l$Sum_PFAS
 data_l$Year<-lubridate::year(data_l$Activity_Start_Date)
 data_l$Month<-lubridate::month(data_l$Activity_Start_Date)
 
+# save data
+write.csv(x = data_l[!data_l$Subject_Taxonomic_Name == "water",], file = here("Data", "MDE", "Kraskura_MDE_fish_longformat_042024.csv"))
+write.csv(x = d_water, file = here("Data", "MDE", "Kraskura_MDE_water_longformat_042024.csv"))
+write.csv(x = data_tot, file = here("Data", "MDE", "Kraskura_MDE_sumPFAS_longformat_042024.csv"))
 ```
 
 
@@ -268,6 +282,8 @@ base_map<-ggplot(us_md) +
   scale_color_jama()+
   geom_point(data = data_loc,
              mapping = aes(x = lon, y = lat, color  = Region))+
+    geom_text(data = data_loc,
+             mapping = aes(x = lon, y = lat, color  = Region, label = Monitoring_Location_ID), size = 1.5, color = "black")+
   # annotate(geom = "text", x = -78, y = 38, label = "MD", 
   #      fontface = "italic", color = "grey22", size = 4)+
   theme(axis.title = element_blank(), 
@@ -293,7 +309,7 @@ p_water_2021<-ggplot(us_md) +
                            color  = Region,
                            size = SumPFAS_water), 
              pch=21)+
-  scale_radius(limits = c(0, 150), range = c(1, 6)) + 
+  scale_radius(limits = c(0, 80), range = c(1, 6)) + 
   # annotate(geom = "text", x = -78, y = 38, label = "MD", 
   #      fontface = "italic", color = "grey22", size = 4)+
   theme(axis.title = element_blank(), 
@@ -314,7 +330,7 @@ p_water_2022<-ggplot(us_md) +
                            color  = Region,
                            size = SumPFAS_water), 
              pch=21)+
-  scale_radius(limits = c(0, 150), range = c(1, 6)) + 
+  scale_radius(limits = c(0, 80), range = c(1, 6)) + 
   # annotate(geom = "text", x = -78, y = 38, label = "MD", 
   #      fontface = "italic", color = "grey22", size = 4)+
   theme(axis.title = element_blank(), 
@@ -700,7 +716,7 @@ plot_by_SpeciesRegion(region = "Western Bay")
 ### Correlations 
 ```{r correlations PFOS, fig.width=3.5, fig.height=7, fig.cap= "Figure 15. The relationship between A: body mass and PFOS tissue concentrations, and B: the PFOS in fish tissue and water"}
 # correct format
-data_w[, c(11:35)] <- sapply(data_w[, c(11:35)], as.numeric)
+data_w[, c(11:34)] <- sapply(data_w[, c(11:34)], as.numeric)
 data_w[, c(1:5, 7:10)] <- sapply(data_w[, c(1:5, 7:10)], as.factor)
 
 # filter fish and water

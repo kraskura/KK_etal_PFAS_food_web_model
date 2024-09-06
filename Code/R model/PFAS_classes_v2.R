@@ -34,7 +34,7 @@ library(assertthat)
 
 # ***********************************************
 new_Settings <- function(
-		chooseDiet, # default, forced; 
+		chooseDiet, # default (trophic ) or forced (known diet); 
 		chooseDmw = "Droge", # or 'calculated'
 		chooseEw = "empirical",
 		chooseKoc = "Koc",
@@ -337,6 +337,7 @@ new_Organism <- function(
       RMR_ml = RMR_ml0 * (W_B*1000) * 24 # mlO2 /whole fish / day
       RMR_n = ((1) * (RMR_ml / 1000)) / ((0.0821) * (273+T)) # mol O2
       RMR =  RMR_n * 32* 1000 # mg O2 / whole fish / day
+      
       # P*V = n*R*T / n = 
       # where P = pressure in atm (1 atm = 1000mb = 101.3 kPa), 
       # V = vol in Liters
@@ -352,7 +353,7 @@ new_Organism <- function(
       
     }else{
       # message("RMR provided")
-      G_V = RMR/ env$C_OX
+      G_V = RMR/ env$C_OX * m_O
     }
     
   }
@@ -405,6 +406,7 @@ new_Organism <- function(
       #sigma is the scavenging efficiency of particles
       # G_V = _getG_V(env, settings)
       G_D = G_V * env$C_SS * sigma # return G_D
+      message("G_D switch = 2")
   } else {
       stop("error in getG_D: wrong input for switchG_D argument")
   }
@@ -473,7 +475,7 @@ new_Organism <- function(
 #         for chemical uptake via respiratory area (i.e., gills and skin) """
 # 
     if(switchk_1 == 0){
-      # #A and B are constants describing the reistance to chemical uptake
+      # #A and B are constants describing the resistance to chemical uptake
       # #through aqueous (A) and organic phases (B) of the algae, phytoplankton, or macrophyte.
       # #A default value = 6x10^-5 for PCBs in Arnot & Gobas 2004; 8.2 x 10^-3 in Gobas & MacKay 1987
       # #B default value = 5.5 for PCBs in Arnot & Gobas 2004; 0.68 in Gobas & MacKay 1987

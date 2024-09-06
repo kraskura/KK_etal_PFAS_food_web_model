@@ -441,7 +441,7 @@ create_data_tables<-function(
                             "MMR", "RMR", "pct_FeedRate", "scaling_exp", "feeding_exp", "P_B")
 
 
-  # 2. chemicalData **********************
+  # 2. chemicalData ********************** ---------
   # chemicalData 
   # order of PFAA
   if(is.null(C_WTO_max_ng_mL)){
@@ -475,7 +475,8 @@ create_data_tables<-function(
                             "ng/g (dw)",
                             "unitless")
   
-  # 3. oceanData *****************   # units need?  here here 
+  # 3. oceanData *****************    ---------
+  # units need? 
   oceanData <- data.frame(matrix(data = c(C_OX, T, OCS, delta_OCS, pH, Phi_exp_ocean, C_SS),
                                  ncol=length(1), byrow=TRUE))
   colnames(oceanData) <-c("value")
@@ -488,7 +489,7 @@ create_data_tables<-function(
                          "unitless",
                          "n/a?")
 
-  # 4. chemicalParams *****************
+  # 4. chemicalParams ***************** ---------
   # the order of PFAA
   chemicalParams <- data.frame(matrix(data = c(Log_Kow, pKa, log_Kpw, log_Dmw,
                                                E_D, E_W, log_Koc, chemID),
@@ -505,7 +506,7 @@ create_data_tables<-function(
                           "n")
   
   
-  # 5. foodWebData *****************
+  # 5. foodWebData ***************** ---------
   # how much each species eat what
   # fill out each row, in a list 
   for (i in 1:length(foodWeb)){
@@ -518,7 +519,7 @@ create_data_tables<-function(
   rownames(foodWebData)<-names(foodWeb)
   colnames(foodWebData)<-c("Sed", names( foodWeb))
   
-  # 6. dietData median, min, max diet. 
+  # 6. dietData median, min, max diet. ----------
   # the order of PFAA
   for (i in 1:length(diet)){
     if( i == 1){

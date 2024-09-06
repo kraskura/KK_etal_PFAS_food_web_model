@@ -167,6 +167,7 @@ Phy = c(1,0,0,0,0),
 Pry = c(0.7,0.3,0,0,0),
 Bgl = c(0.1,0.3,0.6,0,0),
 Bas = c(0.1,0.1,0.7,0.1,0)
+
       ),
   C_WTO_ng_mL = unlist(c(d.water[, "PFHxS.m"]/1000, # original data in ng/L convert to ng/mL
                   d.water[, "PFOS.m"]/1000,

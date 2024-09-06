@@ -1,0 +1,155 @@
+---
+title: "Stable isotope data - informing food web"
+author: "Krista Kraskura"
+date: "`r Sys.Date()`"
+output: 
+  # pdf_document:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    toc_depth: 4
+    theme: journal
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r import data, message = FALSE, warning = FALSE}
+library(readxl)
+library(tidyverse)
+library(ggsci)
+library(here)
+here::i_am(path = "./Code/R results/stable_isotope_data.Rmd")
+# here()
+
+jba<-read_excel(path = here("Data","Original_Brown_etal","JBA","JBA_Biota_fishmass_kk.xlsx"),
+           sheet = "trophic")
+
+wg<-read_excel(path = here("Data","Original_Brown_etal","WG","WG_fishMass_kk.xlsx"),
+           sheet = "trophic")
+
+jba.w<-read_excel(path = here("Data","Original_Brown_etal","JBA","JBA_Biota_fishmass_kk.xlsx"),
+           sheet = "data")
+
+wg.w<-read_excel(path = here("Data","Original_Brown_etal","WG","WG_fishMass_kk.xlsx"),
+           sheet = "data")
+
+jba<-merge(jba, jba.w[, c("Sp", "mean_mass")], by = "Sp", all.x = T)
+
+wg<-merge(wg, wg.w[, c("Sp", "mean_mass")], by = "Sp", all.x = T)
+
+```
+
+```{r trophic levels}
+# JBA summer
+jba_trophic_levels<-data.frame(
+  Sp = c("Phy", "Kil","Chu", "Dac", "Dar", "Min", "Fal", "Bas", "Mad", "Pum", "Swa"), 
+  trophic = c(0,  2.5,  3.93, 2.62, 3.75,  2.92,  3.25,  1.5,   3.53,  3.83,  2.5),
+  System = c("JBA"),
+  loc = "JBA")
+
+
+wg_trophic_levels<-data.frame(
+  Sp = c("Phy", "Pry", "Bgl", "Bas"), 
+  trophic = c(0,        2.31, 3.08,  3.69),
+  System = c("Willow Grove"), 
+  loc = "WG")
+
+jba<-merge(jba, jba_trophic_levels, by = "Sp")
+wg<-merge(wg, wg_trophic_levels, by = "Sp")
+jba$trophic <- as.numeric(jba$trophic)
+wg$trophic <- as.numeric(wg$trophic)
+
+# get means
+
+jba_m<-jba %>% 
+  dplyr::group_by(Sp) %>% 
+  summarise(c13_m = mean(c13), 
+            c13_sd = sd(c13), 
+            n15_m = mean(n15), 
+            n15_sd = sd(n15),
+            n  = n())
+
+wg_m<-wg %>% 
+  dplyr::group_by(Sp) %>% 
+  summarise(c13_m = mean(c13), 
+            c13_sd = sd(c13), 
+            n15_m = mean(n15), 
+            n15_sd = sd(n15),
+            n  = n())
+
+```
+
+```{r plot data, fig.width=5, fig.height=4}
+ggplot(data = jba, aes(x = c13, y = n15, color = Sp, fill = Sp, label = Sp, size = mean_mass))+
+  geom_point(pch = 21)+
+  geom_text(size = 3, nudge_x = 0.3)+
+  theme_bw()+
+  scale_color_cosmic()+
+  scale_fill_cosmic()+
+  ggtitle("JBA food web")+
+  ylab(expression(delta^15*N~("‰")))+
+  xlab(expression(delta^13*C~("‰")))
+
+ggplot(data = jba_m, aes(x = c13_m, y = n15_m, color = Sp, fill = Sp, label = Sp))+
+  geom_point(pch = 21)+
+  geom_errorbarh(mapping = aes(xmin = c13_m - c13_sd, xmax = c13_m + c13_sd),  height = 0.1)+
+  geom_errorbar(mapping = aes(ymin = n15_m - n15_sd, ymax = n15_m + n15_sd), width = 0.1)+
+  geom_text(size = 3, nudge_x = 0.3)+
+  theme_bw()+
+  scale_color_cosmic()+
+  scale_fill_cosmic()+
+  ggtitle("JBA food web")+
+  ylab(expression(delta^15*N~("‰")))+
+  xlab(expression(delta^13*C~("‰")))
+
+ggplot(data = jba, aes(x = mean_mass, y = trophic, color = Sp, fill = Sp, label = Sp))+
+  geom_point(pch = 21)+
+  geom_text(size = 3, nudge_x = 0.3)+
+  theme_bw()+
+  scale_color_cosmic()+
+  scale_fill_cosmic()+
+  ggtitle("JBA food web")+
+  xlab("Body mass")+
+  ylab("Trophic level")
+
+ggplot(data = wg_m, aes(x = c13_m, y = n15_m, color = Sp, fill = Sp, label = Sp))+
+  geom_point(pch = 21)+
+  geom_errorbarh(mapping = aes(xmin = c13_m - c13_sd, xmax = c13_m + c13_sd),  height = 0.1)+
+  geom_errorbar(mapping = aes(ymin = n15_m - n15_sd, ymax = n15_m + n15_sd), width = 0.1)+
+  geom_text(size = 3, nudge_x = 0.3)+
+  theme_bw()+
+  scale_color_cosmic()+
+  scale_fill_cosmic()+
+  ggtitle("WG")+
+  ylab(expression(delta^15*N~("‰")))+
+  xlab(expression(delta^13*C~("‰")))
+
+ggplot(data = wg, aes(x = c13, y = n15, color = Sp, fill = Sp, label = Sp, size = mean_mass))+
+  geom_point(pch = 21)+
+  geom_text(size = 3, nudge_x = 0.3)+
+  theme_bw()+
+  scale_color_jama()+
+  scale_fill_jama()+
+  ggtitle("WG food web")+
+  ylab(expression(delta^15*N~("‰")))+
+  xlab(expression(delta^13*C~("‰")))
+
+ggplot(data = wg, aes(x = mean_mass, y = trophic, color = Sp, fill = Sp, label = Sp))+
+  geom_point(pch = 21)+
+  geom_text(size = 3, nudge_x = 0.3)+
+  theme_bw()+
+  scale_color_jama()+
+  scale_fill_jama()+
+  ggtitle("WG food web")+
+  xlab("Body mass")+
+  ylab("Trophic level")
+```
+
+
+

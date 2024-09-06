@@ -6,8 +6,6 @@
 # These values are used in mc_sim_data_table.R to randomly select the mentioned 
 # values when constructing inputFiles_list for a model run. 
 # 
-
-
 # library(readxl)
 # library(tidyverse)
 # 
@@ -26,7 +24,6 @@ d.fish.wg<-read.csv(here("Data/Original_Brown_etal/WG/WG_Biota_Data.csv")) #fish
 d.fish.w.wg<-read_xlsx(here("Data/Original_Brown_etal/WG/WG_fishMass_kk.xlsx"), sheet = "data")
 d.water.wg<-read.csv(here("Data/Original_Brown_etal/WG/WG_Water_Data.csv")) #water
 d.sed.wg<-read.csv(here("Data/Original_Brown_etal/WG/WG_Sediment_Data.csv")) #sediment
-
 
 d.fish.wg$Seasonality<-"Fall"
 d.fish.w.wg$Seasonality<-"Fall"
@@ -114,12 +111,12 @@ d.sed <- rbind(d.sed.jba, d.sed.wg) %>%
 # carcass only 
 dfish.MEAN<-d.fish %>% 
   dplyr:::group_by(loc, SppAlias, Seasonality) %>% 
-  summarize(PFHxS = mean(PFHxS),
-            PFOS = mean(PFOS), 
-            PFOA = mean(PFOA), 
-            PFNA = mean(PFNA),
-            PFDA = mean(PFDA), 
-            PFUA = mean(PFUA),.groups = 'keep') 
+  summarize(PFHxS = median(PFHxS),
+            PFOS =  median(PFOS), 
+            PFOA =  median(PFOA), 
+            PFNA =  median(PFNA),
+            PFDA =  median(PFDA), 
+            PFUA =  median(PFUA),.groups = 'keep') 
 dfish.MIN<-d.fish %>% 
   dplyr:::group_by( loc, SppAlias, Seasonality) %>% 
   summarize(
@@ -139,16 +136,28 @@ dfish.MAX<-d.fish %>%
             PFDA = max(PFDA), 
             PFUA = max(PFUA),.groups = 'keep') 
 
+dfish.CV<-d.fish %>% 
+  dplyr:::group_by( loc, SppAlias, Seasonality) %>% 
+  summarize(
+            PFHxS = sd(PFHxS)/mean(PFHxS),
+            PFOS = sd(PFOS)/mean(PFOS), 
+            PFOA = sd(PFOA)/mean(PFOA), 
+            PFNA = sd(PFNA)/mean(PFNA),
+            PFDA = sd(PFDA)/mean(PFDA), 
+            PFUA = sd(PFUA)/mean(PFUA),.groups = 'keep') %>% 
+  pivot_longer(cols = c("PFHxS", "PFOS", "PFOA", "PFNA", "PFDA", "PFUA"), 
+               names_to = "PFAA", values_to = "fish_cv")
+
 # water samples
 dwater.MEAN<-d.water %>% 
   dplyr:::group_by(loc, Seasonality) %>% 
-  summarize(PFHxS = mean(PFHxS),
-            PFOS = mean(PFOS), 
-            PFOA = mean(PFOA), 
-            PFNA = mean(PFNA),
-            PFDA = mean(PFDA), 
-            PFUA = mean(PFUA), 
-            Temp = mean(Temperature),.groups = 'keep') 
+  summarize(PFHxS = median(PFHxS),
+            PFOS = median(PFOS), 
+            PFOA = median(PFOA), 
+            PFNA = median(PFNA),
+            PFDA = median(PFDA), 
+            PFUA = median(PFUA), 
+            Temp = median(Temperature),.groups = 'keep') 
 
 dwater.MIN<-d.water  %>% 
   dplyr:::group_by(loc, Seasonality) %>%
@@ -174,12 +183,12 @@ dwater.MAX<-d.water  %>%
 # sediment samples
 dsed.MEAN<-d.sed %>% 
   dplyr:::group_by(loc, Seasonality) %>% 
-  summarize(PFHxS = mean(PFHxS),
-            PFOS = mean(PFOS), 
-            PFOA = mean(PFOA), 
-            PFNA = mean(PFNA),
-            PFDA = mean(PFDA), 
-            PFUA = mean(PFUA), .groups = 'keep') 
+  summarize(PFHxS = median(PFHxS),
+            PFOS = median(PFOS), 
+            PFOA = median(PFOA), 
+            PFNA = median(PFNA),
+            PFDA = median(PFDA), 
+            PFUA = median(PFUA), .groups = 'keep') 
 
 dsed.MIN<-d.sed  %>% 
   dplyr:::group_by(loc, Seasonality) %>%
@@ -200,10 +209,18 @@ dsed.MAX<-d.sed  %>%
             PFDA = max(PFDA), 
             PFUA = max(PFUA), .groups = 'keep') 
 
-# fish weight data
+# fish weight data, originally in g turn to kg
 d.fish.w.wg$loc <- "WG"
 d.fish.w.jba$Seasonality<-"na"
 d.fish.w.jba$loc <- "JBA"
 d.fish.w<-rbind(d.fish.w.jba, d.fish.w.wg)
+
+# grams to kg
+d.fish.w$mean_mass<-d.fish.w$mean_mass/1000
+d.fish.w$min_mass<-d.fish.w$min_mass/1000
+d.fish.w$max_mass<-d.fish.w$max_mass/1000
+
 names(d.fish.w)[names(d.fish.w) == 'Sp'] <- 'SppAlias'
+
+
   
