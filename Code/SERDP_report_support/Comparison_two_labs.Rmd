@@ -1,0 +1,323 @@
+---
+title: "Comparison of data from two labs"
+author: "Krista Kraskura"
+date: "`r Sys.Date()`"
+output:
+  word_document:
+    toc: true
+    toc_depth: '4'
+  pdf_document:
+    toc: true
+    toc_depth: '4'
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    toc_depth: 4
+    theme: journal
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE, 
+                      warning = FALSE, dpi = 300)
+```
+
+
+```{r libraries}
+library(lmerTest)
+library(lme4)
+library(emmeans)
+library(car)
+library(readxl)
+library(ggsci)
+library(ggthemes)
+library(tidyverse)
+library(here)
+
+# read in the excel data 
+d_comp<-read_excel(here("./Data/SERDP_report_support/Data Comparison.xlsx"), sheet = 2)
+
+# only data above detection limit
+d_comp<-d_comp %>%
+  mutate(`Sample ID` = factor(`Sample ID`),
+         Limit = as.numeric(Limit), 
+         Result = as.numeric(Result), 
+         Analyte = factor(Analyte),
+         below_lim = if_else(Result<Limit, 1, 0)) 
+
+data<-d_comp %>% 
+  filter(below_lim == 0)
+
+# how many Analytes?
+# length(levels(factor(data$Analyte))) # 40 
+# list of PFAS that are detected above limits in both labs 
+PFAS_list<-levels(factor(data$Analyte))
+
+# n unique samples sent out: 
+# length(levels(factor(d_comp$`Sample ID`)))
+
+# colors 
+P50<- c("11Cl-PF3OUdS" = "#FD0022",
+ "9Cl-PF3ONS" = "red4",
+ "ADONA" = "black",
+ "8:2 FTCA" = "#FB0DE2",
+ "8:2 FTS"  = "#00c9a7",
+ "8:2 FTUCA" = "#F2C4C7",
+ "8:2diPAP" = "#FE948F", 
+ "5:3 FTCA" = "#B60D5D",
+ "EtFOSAA"  = "#F2E300",
+ "FBSA"  = "grey80",
+ "FOSA"   = "#D491FF",
+ "4:2 FTS" = "#843573",
+ "HFPODA"  = "green",     
+"MeFOSA"  = "#AAF597",
+"MeFOSAA"  = "#36C2CE",
+"NEtFOSA"  = "#0081cf",
+"NEtFOSAA" = "yellow",
+"NEtFOSE"  = "blue4",
+"NFDHA" = "#0D95FC",
+"NMeFOSA"  = "#62686A",
+"NMeFOSAA" = "grey30",
+"7:3 FTCA"  = "#A49949",
+"6:2 DiPAP" = "#FB78D1",
+"6:2 FTCA"  = "#7A3800",
+"6:2 FTS"  = "#BF0DFF",
+"6:2 FTUCA" = "#AAF597",
+"10:2 FTCA"  = "#843573",
+"10:2 FTS"  = "#BEE7FB",
+"NMeFOSE" = "#79BE9E",
+"PFBA" = "#FF0060",
+"PFBS" = "#843573",
+"PFDoA"  = "grey19",
+"PFDoS"  = "brown",
+"PFDS"  = "#005600",
+"PFEESA"  = "white",
+"PFHpA" = "#00c9a7",
+"PFHpS" = "#402E7A",
+"PFHxA"  = "#C63C51",
+"FHxSA"  = "yellow4",
+"PFHxDA" = "#C9DABF",
+"PFMBA"  = "#f3c5ff",
+"PFMPA"  = "#B5C18E",
+"PFNS"  = "#1679A4" ,
+"PFODA"  = "#FFFF80",
+"diSAmPAP"  = "#E9C874",
+ "NMeFOSAA"  = "#88D66C",
+"FOSAA"  = "#059212",
+ 'PFEtCHxS' = '#AA4499',
+ 'PFHxS' = '#332288', # 
+ 'PFOS' = "#C4A2D5", # 
+ 'PFOA' = '#117733',
+ 'PFNA' = '#88CCEE',
+ 'PFDA' = 'orange',
+"PFOSA" ="grey40" ,
+"PFPeA" = "#E9C874",
+"PFPeS"  = '#882255',
+"PFPrS" = "#FC1CB1",
+"PFTeDA" = "#AFF700",
+"PFTrDA" = "#D20062",
+"ClPFOS" ="#ECFFE6",
+"PFUnA" = "#0D1282",        
+"3:3 FTCA" = "#22D9FF", 
+ "EtFOSA" = "grey",
+ "MeFOSE"= "#FD5C5A",
+  "EtFOSE" = "#22D943",
+ "PFecHS" = "grey50")
+
+
+
+
+```
+
+</br>
+
+#### SUMMARY STATISTICS 
+
+A total of 20 samples were analyzed in two different labs, Vista and Eurofins. 
+
+```{r}
+
+d_comp %>% 
+  dplyr::group_by(Lab, Analyte) %>% 
+  dplyr::summarise(`Detection Limit` = mean(Limit)) %>% 
+  pivot_wider(values_from = `Detection Limit`, names_from = Lab) %>% 
+  knitr::kable(caption = "Table 1: The list of PFAS that were tested each lab and their detection limits")
+
+
+table(data$`Sample ID`, data$Lab) %>% 
+    knitr::kable(caption = "Table 2: The sample size of PFAS measured above detection limit in each Lab in each Sample")
+
+
+```
+
+
+
+</br>
+
+#### FIGURES
+```{r data ony above the detection limit, fig.align='center', fig.width=10, fig.height=3, fig.cap="Figure 1. The comparison of each samples measured PFAS concentrations. All panels show the same data but the last two are split up at with high and low values (dashed line in most left side plot). The lines connect a distinct sample."}
+
+diff1<-ggplot(data, aes(Lab, Result,
+                 group = interaction(Analyte, `Sample ID`),
+                 color = Analyte))+
+  geom_point(pch = 21)+
+  geom_line(linewidth  = 0.1)+
+  scale_color_manual(values = P50)+
+  geom_hline(yintercept = 400, linetype = 2)+
+  theme_bw()+
+  ylab("PFAS Conc. (ng/L)")+ 
+  guides(color=guide_legend(ncol=2))
+
+difflow<-ggplot(data, aes(Lab, Result,
+                 group = interaction(Analyte, `Sample ID`),
+                 color = Analyte))+
+  geom_point(pch = 21, show.legend = F)+
+  geom_line(linewidth  = 0.1, show.legend = F)+
+  scale_color_manual(values = P50)+
+  ylim(0,400)+
+  theme_bw()+
+  ylab("PFAS Conc. (ng/L)")
+
+diffhigh<-ggplot(data, aes(Lab, Result,
+                 group = interaction(Analyte, `Sample ID`),
+                 color = Analyte))+
+  geom_point(pch = 21, show.legend = F)+
+  geom_line(linewidth  = 0.1, show.legend = F)+
+  scale_color_manual(values = P50)+
+  ylim(400, 1000)+
+  theme_bw()+
+  ylab("PFAS Conc. (ng/L)")
+
+cowplot::plot_grid(diff1, diffhigh, difflow, ncol = 3, rel_widths = c(1.7, 0.9, 0.9))
+```
+
+**Calculations**: Percent difference calculated using formula: $(C_{Vista} - C_{Eurofins})/((C_{Vista} + C_{Eurofins}) / 2) * 100%).$
+
+
+```{r change in values figures}
+data_wide<-data %>% 
+  select(`Sample ID`, Lab, Analyte, Result) %>% 
+  pivot_wider(names_from = `Lab`, values_from = Result) %>% 
+  mutate(diff = Vista - Eurofins,
+         percent_diff = (Vista - Eurofins)/((Vista + Eurofins) / 2) * 100)
+
+diff_abs1<-ggplot(data_wide, aes(y = Analyte, diff,
+                 group = interaction(Analyte),
+                 color = Analyte,
+                 fill = Analyte))+
+  geom_boxplot(outliers = FALSE, linewidth = 0.2, alpha = 0.4, show.legend = F)+
+  geom_point(pch = 19, size = 0.5, show.legend = F)+
+  scale_fill_manual(values = P50)+
+  scale_color_manual(values = P50)+
+  theme_bw()+
+  ylab("Absolute diff (Vista - Eurofins; ng/L)")+
+  xlab("Difference (ng/L)")+
+  geom_vline(xintercept = c(0), color = "grey", lty = 2)
+
+diff_abs2<-ggplot(data_wide, aes(y = `Sample ID`, diff,
+                 group = interaction( `Sample ID`)))+
+  geom_boxplot(outliers = FALSE, linewidth = 0.2)+
+  geom_point(pch = 19, size = 0.5)+
+  scale_color_manual(values = P50)+
+  theme_bw()+
+  ylab("")+
+  xlab("Difference (ng/L)")+
+  geom_vline(xintercept = c(0), color = "grey", lty = 2)
+
+diff_perc1<-ggplot(data_wide, aes(y = Analyte, percent_diff,
+                 group = interaction(Analyte),
+                 color = Analyte,
+                 fill = Analyte))+
+  geom_boxplot(outliers = FALSE, linewidth = 0.2, show.legend = F, alpha = 0.4)+
+  geom_point(pch = 19, size = 0.5, show.legend = F)+
+  scale_color_manual(values = P50)+
+  scale_fill_manual(values = P50)+
+  theme_bw()+
+  ylab("Perecent diff (Vista - Eurofins)")+
+  xlab("Percent difference")+
+  geom_vline(xintercept = c(-30, 30))
+
+diff_perc2<-ggplot(data_wide, aes(y = `Sample ID`, percent_diff,
+                 group = interaction( `Sample ID`)))+
+  geom_boxplot(outliers = FALSE, linewidth = 0.2, show.legend = F)+
+  geom_point(pch = 19, size = 0.5, show.legend = F)+
+  scale_color_manual(values = P50)+
+  theme_bw()+
+  ylab("")+
+  xlab("Percent difference")+
+  geom_vline(xintercept = c(-30, 30))
+```
+
+
+```{r percent plot, fig.align='center', fig.width=12, fig.height=4,fig.ncol= 2, fig.cap="Figure 2. A percent difference between two measured values by PFAS (left) and samples (right). The vertical lines show 30% change." }
+cowplot::plot_grid(diff_perc1, diff_perc2, ncol = 2)
+```
+
+
+```{r abs val plot, fig.align='center', fig.width=12, fig.height=4,fig.ncol= 2, fig.cap="Figure 3. An absolute change in measured values by PFAS (left) and samples (right)." }
+cowplot::plot_grid(diff_abs1, diff_abs2, ncol = 2)
+
+```
+
+</br>
+
+#### STATISTICS 
+
+1. Paired t-test results for each repeated PFAS analyte that had reported values above the lab-specific detection limits. 
+
+```{r STATS repeat measurest t-test for each analyte}
+# PFAS_list
+remove(ttestTable)
+for(i in 1:length(PFAS_list)){
+  d<-data_wide[c(data_wide$Analyte == PFAS_list[i]) , ]
+  d<-d[complete.cases(d),]
+  if(nrow(d) > 1){
+    PFAS_d<-PFAS_list[i]
+    pvalue<-round(t.test(d$Vista, d$Eurofins, paired = TRUE)$p.value, 5)
+    meandiff<-round(t.test(d$Vista, d$Eurofins, paired = TRUE)$estimate, 5)
+    n<-nrow(d)
+    
+    if(!exists("ttestTable")){
+      ttestTable<-as.data.frame(t(c(PFAS = PFAS_d,
+                              Pval = pvalue,
+                              MeanDiff = as.numeric(meandiff),
+                              n = n)))
+    }else{
+      ttestTable<-rbind(ttestTable, as.data.frame(t(c(PFAS = PFAS_d,
+                              Pval = pvalue,
+                              MeanDiff = as.numeric(meandiff),
+                              n = n))))
+    }
+    
+  }else{
+   message(paste("Not enough data for: ", PFAS_list[i]))
+  }
+}
+
+knitr::kable(ttestTable)
+
+```
+
+</br>
+
+2. Are there differences between samples?
+
+**Approach**: a simple one way ANOVA where the % change between two measured samples was a dependent variable and sample ID a dependent variable. 
+
+**Result**: there was no evidence that one lab would report higher values in a any given sample compared to another lab (p = 0.9236, df = 19, F = 0.5727).
+
+```{r STATS is there diff in samples, echo=TRUE}
+
+mod1<-aov(percent_diff ~ `Sample ID`, data = data_wide)
+anova(mod1)
+```
+
+```{r}
+write.csv(x = data_wide, file = here("Data", "SERDP_report_support", "wide_format_PFAS_labComparison.csv"))
+```
+
+

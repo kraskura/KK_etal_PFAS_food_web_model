@@ -1,0 +1,29 @@
+"Media","System","Seasonality","n PFAS"
+"liver","AFBC","spring",34
+"liver","AFBC","summer",34
+"liver","WG","fall/winter",34
+"liver","WG","spring",34
+"liver","WG","summer",34
+"muscle","AFBC","spring",34
+"muscle","AFBC","summer",34
+"muscle","WG","fall/winter",12
+"muscle","WG","spring",34
+"muscle","WG","summer",34
+"sediment","AFBC","spring",34
+"sediment","AFBC","summer",34
+"sediment","WG","fall/winter",12
+"sediment","WG","spring",24
+"sediment","WG","summer",34
+"water","AFBC","fall/winter",34
+"water","AFBC","spring",34
+"water","AFBC","summer",34
+"water","WG","fall/winter",12
+"water","WG","spring",34
+"water","WG","summer",34
+"whole body","AFBC","spring",34
+"whole body","AFBC","summer",34
+"whole body","WG","fall/winter",12
+"whole body","WG","summer",34
+"gonad","WG","fall/winter",12
+"gonad","WG","spring",34
+"gonad","WG","summer",34
