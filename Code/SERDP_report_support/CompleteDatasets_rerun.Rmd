@@ -62,162 +62,57 @@ library(here)
 # d_analytes<-read.csv(here("./Data/SERDP_report_support/Analytes.csv"))
 # d_comp<-read_excel(here("./Data/SERDP_report_support/Data Comparison.xlsx"), sheet = 2)
 # new data: 
-d0<-read_excel(here("./Data/SERDP_report_support/SGS PFAS includes some SpringWG sediment data.xlsx"), sheet = 1)
+# d0<-read_excel(here("./Data/SERDP_report_support/SGS PFAS includes some SpringWG sediment data.xlsx"), sheet = 1)
 
 # read in the chain length file s
-d_analytes<-read.csv(here("./Data/SERDP_report_support/Analyte_chain_len.csv"))
+d_analytes<-read.csv(here("./Data/Analyte_chain_len.csv"))
 
-# import old data (pre 2024) -----
-d_jba_biota<-read.csv(here("./Data/SERDP_report_support/JBA_Biota_Data.csv"))
-d_jba_wat<-read.csv(here("./Data/SERDP_report_support/JBA_Water_Data.csv"))
-d_jba_sed<-read.csv(here("./Data/SERDP_report_support/JBA_Sediment_Data.csv"))
+# import data last checked: Jan 2025 -----
+d_jba_biota<-read_xlsx(here("./Data/FINAL/JBA_Biota_Data.xlsx"), sheet = "Data")
+d_jba_wat<-read_xlsx(here("./Data/FINAL/JBA_Water_Data.xlsx"), sheet = "Data")
+d_jba_sed<-read_xlsx(here("./Data/FINAL/JBA_Sediment_Data.xlsx"), sheet = "Data")
 
-d_wg_biota<-read.csv(here("./Data/SERDP_report_support/WG_Biota_Data.csv"))
-d_wg_wat<-read.csv(here("./Data/SERDP_report_support/WG_Water_Data.csv"))
-d_wg_sed<-read.csv(here("./Data/SERDP_report_support/WG_Sediment_Data.csv"))
-
-```
-
-```{r DEPRIC some wrangling }
-# # analytes reported by Eurofins
-# d_analytes$Analyte_short<-sub('.*\\(', '', d_analytes$Analyte)
-# d_analytes$Analyte_short<-sub('\\)', '', d_analytes$Analyte_short)
-# d_analytes$Analyte_short<-factor(d_analytes$Analyte_short)
-# d_analytes$CAS<-factor(d_analytes$CAS)
-# d_analytes$CAS<-trimws(d_analytes$CAS)
-# 
-# # rename to match old data and no space 
-# levels(d_analytes$Analyte_short)[levels(d_analytes$Analyte_short)=="4:2 FTS"] <- "FourTwoFTS"
-# levels(d_analytes$Analyte_short)[levels(d_analytes$Analyte_short)=="6:2 FTS"] <- "SixTwoFTS"
-# levels(d_analytes$Analyte_short)[levels(d_analytes$Analyte_short)=="8:2 FTS"] <- "EightTwoFTS"
-# levels(d_analytes$Analyte_short)[levels(d_analytes$Analyte_short)=="7:3 FTCA"] <- "SevenThreeFTCA"
-# levels(d_analytes$Analyte_short)[levels(d_analytes$Analyte_short)=="5:3 FTCA"] <- "FiveThreeFTCA"
-# levels(d_analytes$Analyte_short)[levels(d_analytes$Analyte_short)=="3:3 FTCA"] <- "ThreeThreeFTCA"
-# 
-# d_jba_wat_new$CAS<-factor(d_jba_wat_new$CAS)
-# d_jba_sed_new$CAS<-factor(d_jba_sed_new$CAS)
-# d_wg_wat_new$CAS<-factor(d_wg_wat_new$CAS)
-# d_wg_sed_new$CAS<-factor(d_wg_sed_new$CAS)
-# 
-# d_analytes$CAS<-paste("CAS", d_analytes$CAS, sep="")
-# d_wg_wat_new$CAS<-paste("CAS", d_wg_wat_new$CAS, sep="")
-# d_wg_sed_new$CAS<-paste("CAS", d_wg_sed_new$CAS, sep="")
-# d_jba_wat_new$CAS<-paste("CAS", d_jba_wat_new$CAS, sep="")
-# d_jba_sed_new$CAS<-paste("CAS", d_jba_sed_new$CAS, sep="")
-# 
-# d_jba_wat_new<-merge(d_jba_wat_new, d_analytes[, c("CAS", "Analyte_short")], by = "CAS", all.x = TRUE)
-# nrow(d_jba_wat_new)
-# d_jba_sed_new<-merge(d_jba_sed_new, d_analytes[, c("CAS", "Analyte_short")], by = "CAS", all.x = TRUE)
-# nrow(d_jba_sed_new)
-# d_wg_wat_new<-merge(d_wg_wat_new, d_analytes[, c("CAS", "Analyte_short")], by = "CAS", all.x = TRUE)
-# nrow(d_wg_wat_new)
-# d_wg_sed_new<-merge(d_wg_sed_new, d_analytes[, c("CAS", "Analyte_short")], by = "CAS", all.x = TRUE)
-# nrow(d_wg_sed_new)
-# # head(d_wg_wat_new)
+d_wg_biota<-read_xlsx(here("./Data/FINAL/WG_Biota_Data.xlsx"), sheet = "Data")
+d_wg_wat<-read_xlsx(here("./Data/FINAL/WG_Water_Data.xlsx"), sheet = "Data")
+d_wg_sed<-read_xlsx(here("./Data/FINAL/WG_Sediment_Data.xlsx"), sheet = "Data")
 
 ```
 
 ```{r functions to wrangle data}
+# get rid of spaces ------
+names(d_jba_wat)<-gsub(" ", "", names(d_jba_wat), fixed = TRUE)
+names(d_jba_sed)<-gsub(" ", "", names(d_jba_sed), fixed = TRUE)
+names(d_jba_biota)<-gsub(" ", "", names(d_jba_biota), fixed = TRUE)
+names(d_wg_wat)<-gsub(" ", "", names(d_wg_wat), fixed = TRUE)
+names(d_wg_sed)<-gsub(" ", "", names(d_wg_sed), fixed = TRUE)
+names(d_wg_biota)<-gsub(" ", "", names(d_wg_biota), fixed = TRUE)
 
-# fish data get rid of periods ------
-names(d_jba_wat)<-gsub(".", "", names(d_jba_wat), fixed = TRUE)
-names(d_jba_sed)<-gsub(".", "", names(d_jba_sed), fixed = TRUE)
-names(d_jba_biota)<-gsub(".", "", names(d_jba_biota), fixed = TRUE)
-names(d_wg_wat)<-gsub(".", "", names(d_wg_wat), fixed = TRUE)
-names(d_wg_sed)<-gsub(".", "", names(d_wg_sed), fixed = TRUE)
-names(d_wg_biota)<-gsub(".", "", names(d_wg_biota), fixed = TRUE)
+# standardize PFAS names, take out `:`
+names(d_jba_wat)<-gsub(":", "", names(d_jba_wat), fixed = TRUE)
+names(d_jba_sed)<-gsub(":", "", names(d_jba_sed), fixed = TRUE)
+names(d_jba_biota)<-gsub(":", "", names(d_jba_biota), fixed = TRUE)
+names(d_wg_wat)<-gsub(":", "", names(d_wg_wat), fixed = TRUE)
+names(d_wg_sed)<-gsub(":", "", names(d_wg_sed), fixed = TRUE)
+names(d_wg_biota)<-gsub(":", "", names(d_wg_biota), fixed = TRUE)
+# standardize PFAS names, take out `-`
+names(d_jba_wat)<-gsub("-", "", names(d_jba_wat), fixed = TRUE)
+names(d_jba_sed)<-gsub("-", "", names(d_jba_sed), fixed = TRUE)
+names(d_jba_biota)<-gsub("-", "", names(d_jba_biota), fixed = TRUE)
+names(d_wg_wat)<-gsub("-", "", names(d_wg_wat), fixed = TRUE)
+names(d_wg_sed)<-gsub("-", "", names(d_wg_sed), fixed = TRUE)
+names(d_wg_biota)<-gsub("-", "", names(d_wg_biota), fixed = TRUE)
 
-# take out the X at the start
-names(d_jba_wat)<-gsub("X", "", names(d_jba_wat), fixed = TRUE)
-names(d_jba_sed)<-gsub("X", "", names(d_jba_sed), fixed = TRUE)
-names(d_jba_biota)<-gsub("X", "", names(d_jba_biota), fixed = TRUE)
-names(d_wg_wat)<-gsub("X", "", names(d_wg_wat), fixed = TRUE)
-names(d_wg_sed)<-gsub("X", "", names(d_wg_sed), fixed = TRUE)
-names(d_wg_biota)<-gsub("X", "", names(d_wg_biota), fixed = TRUE)
 
-removals<-unique(d_wg_sed$SampleID)
-# the ones currently 
-
-d0_wg<-d0 %>% 
-  filter(UNIT != "% Recovery" &
-           SAMPLE_NO != "Lab Blank" &
-           UNIT != "%") %>% 
-  select(SAMPLE_NO, COMPOUND, CONC_FOUND,) %>% 
-  dplyr::rename("SampleID" = "SAMPLE_NO") %>% 
-  filter(!SampleID %in% removals) %>% 
-  filter(grepl("WG", SampleID)) %>% 
-  mutate("Location" = gsub(replacement = "", "-", x = substr(SampleID, start = 11, stop = 15), ),
-         "SampleDate" = as.Date(
-           substr(SampleID, nchar(SampleID) +1 - 8, nchar(SampleID)),
-           format = "%m%d%Y"), 
-         "SedimentType" = NA, 
-         "GrainSize" = NA,
-         "TOC" = NA,  
-         "Gravel" = NA, 
-         "Silt_Clay" = NA, 
-         "Solids" = NA,
-         "SumPFAS" = NA) %>% 
-  filter(!is.na(SampleDate))
-
-d0_wg_log<-d0 %>% 
-  filter(UNIT != "% Recovery" &
-           SAMPLE_NO != "Lab Blank" &
-           UNIT != "%") %>% 
-  select(SAMPLE_NO, COMPOUND, CONC_FOUND,) %>% 
-  dplyr::rename("SampleID" = "SAMPLE_NO") %>% 
-  filter(!SampleID %in% removals) %>% 
-  filter(grepl("WG", SampleID)) %>% 
-  mutate("Location" = gsub(replacement = "", "-", x = substr(SampleID, start = 11, stop = 15), ),
-         "SampleDate" = as.Date(
-           substr(SampleID, nchar(SampleID) +1 - 8, nchar(SampleID)),
-           format = "%m%d%Y"), 
-         "SedimentType" = NA, 
-         "GrainSize" = NA,
-         "TOC" = NA,  
-         "Gravel" = NA, 
-         "Silt_Clay" = NA, 
-         "Solids" = NA,
-         "SumPFAS" = NA) %>% 
-  mutate(CONC_FOUND = log(CONC_FOUND),
-         COMPOUND = paste("log_", COMPOUND, sep="")) %>% 
-  filter(!is.na(SampleDate))
-
-  
-d0_wg_rbind<-rbind(d0_wg, d0_wg_log) %>% 
-  pivot_wider(values_from = CONC_FOUND,
-              names_from = COMPOUND)
-names(d0_wg_rbind)<-gsub(" ", "", names(d0_wg_rbind), fixed = TRUE)
-names(d0_wg_rbind)<-gsub(":", "", names(d0_wg_rbind), fixed = TRUE)
-names(d0_wg_rbind)<-gsub("-", "", names(d0_wg_rbind), fixed = TRUE)
-d0_wg_rbind[which(d0_wg_rbind$Location == "SPILL"), "Location"]<-"Spill"
-d0_wg_rbind[which(d0_wg_rbind$Location == "HEAD"), "Location"]<-"Head"
-d0_wg_rbind[which(d0_wg_rbind$Location == "WEST"), "Location"]<-"North"
-d0_wg_rbind[which(d0_wg_rbind$Location == "EAST"), "Location"]<-"South"
-
-d0_wg_rbind<-d0_wg_rbind %>% 
-  mutate(`FOSA` = NA,
-         `NMeFOSAA` = NA,
-         `NEtFOSAA` = NA,
-         `log_FOSA` = NA,
-         `log_NMeFOSAA` = NA,
-         `log_NEtFOSAA` = NA) %>% 
-  select(all_of(names(d_wg_sed))) %>% 
-  mutate(SampleDate = strptime(paste(SampleDate, "0:00"), format = "%Y-%m-%d %H:%M"))
-
-d_wg_sed$SampleDate<-strptime(d_wg_sed$SampleDate, format = "%m/%d/%Y %H:%M")
-
-d_wg_sed<-rbind(d_wg_sed, d0_wg_rbind)
-# view(d_wg_sed)
 # *******************************************
 # *******************************************
 # find common PFAS in water and in fish ----
-# WG step 1
+# the unique PFAS in each compartment and each system 
 pfas_wg_wat <- d_wg_wat %>%
   dplyr::select(c(PFBA : `42FTS`)) %>% names()
 pfas_wg_sed <- d_wg_sed %>%
   dplyr::select(c(PFBA : PFMPA)) %>% names()
 pfas_wg_biota <- d_wg_biota %>%
-  dplyr::select(c(PFBA : diSAmPAP)) %>% names()
+  dplyr::select(c(PFBA : `11clPF3OUdS2`)) %>% names()
 
 pfas_jba_wat <- d_jba_wat %>%
   dplyr::select(c(PFBA : PFecHS)) %>% names()
@@ -240,34 +135,94 @@ jbaPFASenv<-unique(jbaPFASenv[which((duplicated(jbaPFASenv)))]) # only unique PF
 jbaPFASfishenv<-(c(pfas_jba_biota, jbaPFASenv))# all env and fish PFAS  
 jbaPFAS<-unique(jbaPFASfishenv[which(duplicated(jbaPFASfishenv))])# only unique PFAS in env.
 
-# wgPFAS[order(wgPFAS)] == jbaPFAS[order(jbaPFAS)] # sanity check all JBA and WG PFAS are the same 
+# all(wgPFAS[order(wgPFAS)] == jbaPFAS[order(jbaPFAS)]) # sanity check all JBA and WG PFAS are the same
+```
 
-# filter out the original data sets-----
+```{r data organize last touches}
+# filter out the original data sets
+# and turn date format as needed
 #  WG
 d_wg_wat<-d_wg_wat %>% 
-  select(SampleID, SampleDate, Precipitation, Location, all_of(wgPFAS))
+  dplyr::select(SampleID, SampleDate, Precipitation, Location, all_of(wgPFAS))
 d_wg_sed<-d_wg_sed %>% 
-  select(SampleID, SampleDate, Location, all_of(wgPFAS))
+  dplyr::select(SampleID, SampleDate, Location, all_of(wgPFAS))
 d_wg_biota<-d_wg_biota %>% 
-  select(SampleID, SampleDate, Species, Sex,
+  dplyr::select(SampleID, SampleDate, Species, Sex,
          Tissue, Weight, Length, all_of(wgPFAS))
 
 # JBA
 d_jba_wat<-d_jba_wat %>% 
-  select(SampleID, SampleDate, Precipitation, Location, all_of(jbaPFAS))
+  dplyr::select(SampleID, SampleDate, Precipitation, Location, all_of(jbaPFAS))
 d_jba_sed<-d_jba_sed %>% 
-  select(SampleID, SampleDate, Location, all_of(jbaPFAS))
+  dplyr::select(SampleID, SampleDate, Location, all_of(jbaPFAS))
 d_jba_biota<-d_jba_biota %>% 
-  select(SampleID, SampleDate, CommonName, Sex,
+  dplyr::select(SampleID, SampleDate, CommonName, Sex,
          Tissue, Weight, Length, Location, all_of(jbaPFAS))
 
 # Take out stomach 
 d_wg_biota<-d_wg_biota  %>%  filter(!Tissue == "Stomach")
 d_jba_biota<-d_jba_biota %>%  filter(!Tissue == "Stomach")
 
-# *******************************************
-# *******************************************
+# add seasons 
+# JBA/AFBC Spring sampling (water data): March 30  - April 28 2021: 
+# JBA/AFBC Summer sampling (water data): June 14 - July 16 2021
+# JBA/AFBC Fall/Winter sampling (water data): November 19 2020 - January 14 2021
 
+# WG/NRP Fall sampling (water data): October 9 - November 10 2020; second to last day 2020-11-05
+# WG/NRP Summer sampling (water data): June 15 - August 19 (some sparse sampling) 2021
+# WG/NRP Spring sampling (water data): February 9 - March 23 2021
+
+wg_all<-rbind(d_wg_wat_noSum, d_wg_sed_noSum, d_wg_biota_noSum) %>% 
+  mutate(System = "NRP") %>% 
+  mutate(Seasonality = if_else(SampleDate > as.Date("2021-06-01"), "summer", 
+                              if_else(SampleDate < as.Date("2020-11-20"), "fall/winter", "spring"))) %>% 
+  mutate(SampleID = factor(SampleID), 
+         Spp_Loc = factor(Spp_Loc),
+         Analyte = factor(Analyte), 
+         Seasonality = factor(Seasonality), 
+         Media = factor(Media)) %>%
+  mutate(Media = factor(Media))
+
+wg_all<-merge(wg_all, d_analytes[, c("Analyte", "Chain_len", "Acronym2")])
+wg_all<-wg_all %>% 
+  mutate(Analyte = fct_reorder(Analyte, as.numeric(Chain_len)))
+
+jba_all<-rbind(d_jba_wat_noSum, d_jba_sed_noSum, d_jba_biota_noSum) %>% 
+  mutate(System = "AFBC") %>% 
+  mutate(Seasonality = if_else(SampleDate > as.Date("2021-06-10"), "summer", 
+                              if_else(SampleDate < as.Date("2021-01-25"), "fall/winter", "spring"))) %>% 
+  mutate(SampleID = factor(SampleID), 
+         Spp_Loc = factor(Spp_Loc),
+         Analyte = factor(Analyte), 
+         Seasonality = factor(Seasonality),
+         Media = factor(Media)) %>% 
+  filter(!Media == "stomach") %>% 
+  mutate(Media = factor(Media))
+
+jba_all<-merge(jba_all, d_analytes[, c("Analyte", "Chain_len", "Acronym2")])
+jba_all<-jba_all %>% 
+  mutate(Analyte = fct_reorder(Analyte, Chain_len))
+
+# SampleDate > as.Date("2021-06-01") & SampleDate < as.Date("2021-08-30") # WG Summer 
+# SampleDate > as.Date("2020-10-01") & SampleDate < as.Date("2020-11-20") # WG Fall
+# SampleDate > as.Date("2021-01-30") & SampleDate < as.Date("2021-04-01") # WG spring 
+
+# SampleDate > as.Date("2020-11-10") & SampleDate < as.Date("2021-01-25") # JBA winter
+# SampleDate > as.Date("2021-03-28") & SampleDate < as.Date("2021-05-01") # JBA spring 
+# SampleDate > as.Date("2021-06-10") & SampleDate < as.Date("2021-07-20") # JBA summer 
+
+write.csv(wg_all,
+          file = here("./Data/SERDP_report_support/exports/wg_compiled_jan2025.csv"),
+          row.names = FALSE)
+
+write.csv(jba_all,
+          file = here("./Data/SERDP_report_support/exports/jba_compiled_jan2025.csv"),
+          row.names = FALSE)
+
+
+
+# *******************************************
+# *******************************************
 # WG/NRP (sed, water, sed) -------
 d_wg_wat_noSum <- d_wg_wat %>%
   dplyr::rename(Spp_Loc = Location) %>%
@@ -276,7 +231,8 @@ d_wg_wat_noSum <- d_wg_wat %>%
   pivot_longer(cols = all_of(wgPFAS),
          names_to = "Analyte") %>%
   mutate(Media = "water",
-         SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")) %>% 
+         # SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")
+         ) %>% 
   mutate(Spp_Loc = tolower(Spp_Loc))
 d_wg_wat_noSum<-tibble::add_column(d_wg_wat_noSum, Length = NA, .after = "SampleDate")
 d_wg_wat_noSum<-tibble::add_column(d_wg_wat_noSum, Weight = NA, .after = "SampleDate")
@@ -288,7 +244,7 @@ d_wg_sed_noSum <- d_wg_sed %>%
                 all_of(wgPFAS)) %>% 
   pivot_longer(cols = all_of(wgPFAS),
          names_to = "Analyte") %>%
-  mutate(Media = "sediment") %>% # date converted above
+  mutate(Media = "sediment") %>% # 
          # SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")) %>% 
   mutate(Spp_Loc = tolower(Spp_Loc))
 d_wg_sed_noSum<-tibble::add_column(d_wg_sed_noSum, Precipitation = NA, .before = "Analyte")
@@ -304,7 +260,8 @@ d_wg_biota_noSum <- d_wg_biota %>%
   pivot_longer(cols = all_of(wgPFAS),
          names_to = "Analyte")%>%
   mutate(Media = Tissue,
-        SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")) %>% 
+        # SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")
+        ) %>% 
   dplyr::select(!Tissue) %>% 
   mutate(Spp_Loc = tolower(Spp_Loc), 
          Media = tolower(Media))
@@ -318,7 +275,8 @@ d_jba_wat_noSum <- d_jba_wat %>%
   pivot_longer(cols = all_of(jbaPFAS),
          names_to = "Analyte") %>%
   mutate(Media = "water",
-         SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")) %>% 
+         # SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")
+         ) %>% 
   mutate(Spp_Loc = tolower(Spp_Loc))
 d_jba_wat_noSum<-tibble::add_column(d_jba_wat_noSum, Length = NA, .after = "SampleDate")
 d_jba_wat_noSum<-tibble::add_column(d_jba_wat_noSum, Weight = NA, .after = "SampleDate")
@@ -336,7 +294,8 @@ d_jba_sed_noSum <- d_jba_sed %>%
   # pivot_longer(cols = c(PFBA : PFDS),# old V1 SERDP report; less PFAS 
          # names_to = "Analyte") %>%
   mutate(Media = "sediment",
-         SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")) %>% 
+         # SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")
+         ) %>% 
   mutate(Spp_Loc = tolower(Spp_Loc))
 d_jba_sed_noSum<-tibble::add_column(d_jba_sed_noSum, Precipitation = NA, .before = "Analyte")
 d_jba_sed_noSum<-tibble::add_column(d_jba_sed_noSum, Length = NA, .after = "SampleDate")
@@ -353,7 +312,8 @@ d_jba_biota_noSum <- d_jba_biota %>%
   pivot_longer(cols = all_of(jbaPFAS),
          names_to = "Analyte")%>%
   mutate(Media = Tissue,
-        SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")) %>% 
+        # SampleDate = strptime(SampleDate, format = "%m/%d/%Y %H:%M")
+        ) %>% 
   dplyr::select(!Tissue) %>% 
   mutate(Spp_Loc = tolower(Spp_Loc), 
          Media = tolower(Media))
@@ -451,57 +411,6 @@ P10<-c("eice" = "black",
 
 ```
 
-```{r all datasets}
-# add seasons 
-# JBA/AFBC Spring sampling (water data): March 30  - April 28 2021: 
-# JBA/AFBC Summer sampling (water data): June 14 - July 16 2021
-# JBA/AFBC Fall/Winter sampling (water data): November 19 2020 - January 14 2021
-
-# WG/NRP Fall sampling (water data): October 9 - November 10 2020; second to last day 2020-11-05
-# WG/NRP Summer sampling (water data): June 15 - August 19 (some sparse sampling) 2021
-# WG/NRP Spring sampling (water data): February 9 - March 23 2021
-
-wg_all<-rbind(d_wg_wat_noSum, d_wg_sed_noSum, d_wg_biota_noSum) %>% 
-  mutate(System = "WG") %>% 
-  mutate(Seasonality = if_else(SampleDate > as.Date("2021-06-01"), "summer", 
-                              if_else(SampleDate < as.Date("2020-11-20"), "fall/winter", "spring"))) %>% 
-  mutate(SampleID = factor(SampleID), 
-         Spp_Loc = factor(Spp_Loc),
-         Analyte = factor(Analyte), 
-         Seasonality = factor(Seasonality), 
-         Media = factor(Media)) %>%
-  mutate(Media = factor(Media))
-
-wg_all<-merge(wg_all, d_analytes[, c("Analyte", "Chain_len", "Acronym2")])
-wg_all<-wg_all %>% 
-  mutate(Analyte = fct_reorder(Analyte, as.numeric(Chain_len)))
-
-jba_all<-rbind(d_jba_wat_noSum, d_jba_sed_noSum, d_jba_biota_noSum) %>% 
-  mutate(System = "AFBC") %>% 
-  mutate(Seasonality = if_else(SampleDate > as.Date("2021-06-10"), "summer", 
-                              if_else(SampleDate < as.Date("2021-01-25"), "fall/winter", "spring"))) %>% 
-  mutate(SampleID = factor(SampleID), 
-         Spp_Loc = factor(Spp_Loc),
-         Analyte = factor(Analyte), 
-         Seasonality = factor(Seasonality),
-         Media = factor(Media)) %>% 
-  filter(!Media == "stomach") %>% 
-  mutate(Media = factor(Media))
-
-jba_all<-merge(jba_all, d_analytes[, c("Analyte", "Chain_len", "Acronym2")])
-jba_all<-jba_all %>% 
-  mutate(Analyte = fct_reorder(Analyte, Chain_len))
-
-# SampleDate > as.Date("2021-06-01") & SampleDate < as.Date("2021-08-30") # WG Summer 
-# SampleDate > as.Date("2020-10-01") & SampleDate < as.Date("2020-11-20") # WG Fall
-# SampleDate > as.Date("2021-01-30") & SampleDate < as.Date("2021-04-01") # WG spring 
-
-# SampleDate > as.Date("2020-11-10") & SampleDate < as.Date("2021-01-25") # JBA winter
-# SampleDate > as.Date("2021-03-28") & SampleDate < as.Date("2021-05-01") # JBA spring 
-# SampleDate > as.Date("2021-06-10") & SampleDate < as.Date("2021-07-20") # JBA summer 
-
-```
-
 ```{r how many total samples and list of PFAS }
 
 # water 
@@ -522,16 +431,7 @@ rbind(jba_all, wg_all) %>%
   group_by(Media, System,  Seasonality) %>% 
   summarise(`n PFAS` = length(unique(na.omit(Analyte))), na.action = NULL) %>% 
   as.data.frame() %>% 
-  write.csv( "./Data/SERDP_report_support/Summary_nPFAS.csv", row.names = FALSE)
-
-
-# wg_all %>% 
-#   filter(!is.na(value)) %>% 
-#   group_by(Media, Seasonality) %>% 
-#   summarise(`n PFAS` = length(unique(na.omit(Analyte))), na.action = NULL) %>% 
-#   as.data.frame() %>% 
-#   write.csv( "./Data/SERDP_report_support/stats_data_NOTlog.csv", row.names = FALSE)
-
+  write.csv( "./Data/SERDP_report_support/exports/Summary_nPFAS.csv", row.names = FALSE)
 
 jba_all %>% 
   filter(!is.na(value)) %>% 
@@ -539,7 +439,7 @@ jba_all %>%
   summarise(`n samples` = length(unique(SampleID))) %>% 
   pivot_wider(names_from = Media, values_from = `n samples`) %>% 
   as.data.frame() %>% 
-  write.csv( "./Data/SERDP_report_support/Summary_n_byPFAS_JBA.csv", row.names = FALSE)
+  write.csv( "./Data/SERDP_report_support/exports/Summary_n_byPFAS_JBA.csv", row.names = FALSE)
   
 
 wg_all %>% 
@@ -548,7 +448,7 @@ wg_all %>%
   summarise(`n samples` = length(unique(SampleID))) %>% 
   pivot_wider(names_from = Media, values_from = `n samples`) %>% 
   as.data.frame() %>% 
-  write.csv( "./Data/SERDP_report_support/Summary_n_byPFAS_WG.csv", row.names = FALSE)
+  write.csv( "./Data/SERDP_report_support/exports/Summary_n_byPFAS_WG.csv", row.names = FALSE)
   
 
 
@@ -632,7 +532,7 @@ ggsave(plot =
 
 ## Figure 3 (Brown et al 2023) 
 
-NRP Water and Sediment
+WG/NRP Water and Sediment
 ```{r Figure 3 WG, fig.cap= "Figure 3 (ms) WG", fig.width=12, fig.height=7}
 # get data first summarise sum PFAS by date
 # rbind(d_wg_wat_noSum) %>%
@@ -985,7 +885,7 @@ ggsave(plot = fig3JBA, filename = "./Figures/SERDP/Fig3_jba_sed_water.png",
 #        units = "in")
 ```
 
-NRP:  PFOS, PFHxS, PFOA
+WG/NRP:  PFOS, PFHxS, PFOA
 ```{r Figure 3 WG analytes, fig.cap= "Figure 3 (ms) WG analyte specific", fig.width=10, fig.height=3.8}
 
 # WATER ------
@@ -1682,6 +1582,12 @@ dim(df_sumALL)
 ## Figure 5 (Brown et al 2023) 
 
 ```{r Figure 5 WG sed and wat, fig.cap="Figure 5 (ms) WG water", fig.width=10, fig.height=7}
+# order for x axis: 
+# Spill Ripp Down Exit
+
+# mutate(name = fct_relevel(Spp_Loc, 
+#             "spill", "ripp", "down", "exit"))
+
 # WATER -----
 pfhxs_wg_wat<-rbind(d_wg_wat_noSum) %>% 
   filter(Analyte == "PFHxS" & !Spp_Loc == "fb" & !Spp_Loc == "road" & !Spp_Loc == "eice") %>% 
@@ -1804,6 +1710,10 @@ ggsave(plot = fig5_wat, filename = "./Figures/SERDP/Fig5_wat_sed_wg.png", height
 ```{r Figure 5 JBA sed and wat, fig.cap="Figure 5 (ms) JBA water", fig.width=10, fig.height=7}
 
 # WATER -----
+d_jba_wat_noSum$Spp_Loc = factor(d_jba_wat_noSum$Spp_Loc, levels = c("spill", "ripp", "down", "exit"))
+d_jba_sed_noSum$Spp_Loc = factor(d_jba_sed_noSum$Spp_Loc, levels = c("spill", "ripp", "down", "exit"))
+
+
 pfhxs_jba_wat<-rbind(d_jba_wat_noSum) %>% 
   filter(Analyte == "PFHxS" & !Spp_Loc == "fb") %>% 
   mutate(SampleID = factor(SampleID)) %>% 
@@ -2083,7 +1993,7 @@ unique(d_wg_biota_noSum$SampleDate)
 sumJBA<-rbind(jba_all) %>% 
   filter(Media == "water") %>% 
   mutate(SampleID = factor(SampleID)) %>% 
-  dplyr::group_by(Media, SampleDate, Seasonality) %>% 
+  dplyr::group_by(Media,SampleID, SampleDate, Seasonality) %>% 
   dplyr::summarise(SumPFAS = sum(value, na.rm = T)) # ng/L
 sumJBAmuscle<-rbind(jba_all) %>% 
   filter(Media == "muscle") %>% 
@@ -2110,7 +2020,7 @@ sumJBA_all<-rbind(sumJBA,
 sumWG<-rbind(wg_all) %>% 
   filter(Media == "water") %>% 
   mutate(SampleID = factor(SampleID)) %>% 
-  dplyr::group_by(Media, SampleDate, Seasonality) %>% 
+  dplyr::group_by(Media, SampleID, SampleDate, Seasonality) %>% 
   dplyr::summarise(SumPFAS = sum(value, na.rm = T)) # ng/L
 sumWGmuscle<-rbind(wg_all) %>% 
   filter(Media == "muscle") %>% 
@@ -2136,40 +2046,7 @@ sumWG_all<-rbind(sumWG,
 # WG timeline plot ----
 wgEquil<-ggplot(sumWG, aes(x=as.Date(SampleDate), y=SumPFAS,
                   color = Seasonality)) +
-    geom_line()+
-   #  geom_boxplot(data = sumWGmuscle, 
-   #             mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS/1000,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             linewidth =0.2, 
-   #             width = 5, alpha = 0.3, outliers = FALSE,
-   #             position = position_nudge(x = 20))+
-   #  geom_boxplot(data = sumWGliver,
-   #             mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS/1000,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             linewidth =0.2, 
-   #             width = 5, alpha = 0, outliers = FALSE,
-   #             position = position_nudge(x = 10))+
-   # geom_boxplot(data = sumWGfish,
-   #             mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS/1000,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             linewidth =0.2, 
-   #             width = 5, alpha = 0.8, outliers = FALSE,
-   #             position = position_nudge(x = 15))+
-   #  stat_summary(data = sumWGfish,
-   #               fun.y=mean,
-   #               mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS/1000,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             position = position_nudge(x = 15),
-   #              geom="point", shape="+",
-   #              size=1, stroke = 2, color="red", fill="red") +
+    # geom_line()+
     geom_vline(xintercept = c(as.Date("2020-11-10"),
                               as.Date("2021-04-28"),
                               as.Date("2021-08-19")), color = "grey", linewidth = 1)+ # sampling dates
@@ -2181,44 +2058,19 @@ wgEquil<-ggplot(sumWG, aes(x=as.Date(SampleDate), y=SumPFAS,
     scale_x_date(date_labels = "%b %d", breaks = "1 month", 
                 limits = c(as.Date("2020-10-01"), as.Date("2021-09-01")))+
     theme_bw()+
-    ylim(0, 30000)+
-    # geom_hline(yintercept = 10000, color = "grey", linewidth = 0.2, linetype = "dashed")+
+    ylim(0, 10000)+
+    geom_hline(yintercept = 1000, color = "grey", linewidth = 0.2, linetype = "dashed")+
     # geom_hline(yintercept = 100, color = "grey", linewidth = 0.2, linetype = "dashed")+
     theme(axis.text.x = element_text(angle = 45, hjust=1),
           panel.grid = element_blank(),
           legend.position = "none")+
   ggtitle("NRP")
-wgEquil
+# wgEquil
 
 # JBA timeline plot -----
-
 jbaEquil<-ggplot(sumJBA, aes(x=as.Date(SampleDate), y=SumPFAS,
                   color = Seasonality)) +
-    geom_line()+
-   #  geom_boxplot(data = sumJBAmuscle, 
-   #             mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             linewidth =0.2, 
-   #             width = 5, alpha = 0.3, outliers = FALSE,
-   #             position = position_nudge(x = 20))+
-   #  geom_boxplot(data = sumJBAliver,
-   #             mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             linewidth =0.2, 
-   #             width = 5, alpha = 0, size = 0.5, outliers = FALSE,
-   #             position = position_nudge(x = 10))+
-   # geom_boxplot(data = sumJBAfish,
-   #             mapping = aes(x=as.Date(SampleDate),
-   #                           y=SumPFAS,
-   #                           color = Seasonality,
-   #                           fill = Seasonality),
-   #             linewidth =0.2,
-   #             width = 5, alpha = 0.8, outliers = FALSE,
-   #             position = position_nudge(x = 15))+
+    # geom_line()+
     geom_vline(xintercept = c(as.Date("2021-04-28"),
                               as.Date("2021-07-16")),
                color = "grey", linewidth = 1)+ # sampling dates
@@ -2230,16 +2082,17 @@ jbaEquil<-ggplot(sumJBA, aes(x=as.Date(SampleDate), y=SumPFAS,
     scale_x_date(date_labels = "%b %d", breaks = "1 month", 
                 limits = c(as.Date("2020-10-01"), as.Date("2021-09-01")))+
     theme_bw()+
-    ylim(0, 30000)+
-    # geom_hline(yintercept = 10000, color = "grey", linewidth = 0.2, linetype = "dashed")+
+    ylim(0, 10000)+
+    geom_hline(yintercept = 1000, color = "grey", linewidth = 0.2, linetype = "dashed")+
     # geom_hline(yintercept = 100, color = "grey", linewidth = 0.2, linetype = "dashed")+
     theme(axis.text.x = element_text(angle = 45, hjust=1),
           panel.grid = element_blank(),
           legend.position = "none")+
     ggtitle("AFBC")
+# jbaEquil
 
-# ggsave(cowplot::plot_grid(wgEquil, jbaEquil, 
-#                           nrow = 2, 
+# ggsave(cowplot::plot_grid(wgEquil, jbaEquil,
+#                           nrow = 2,
 #                           labels = "AUTO"),
 #        filename = "./Figures/SERDP/Fig_fig_fis_equil_jba.png",
 #        height = 7, width = 8,
@@ -2259,7 +2112,7 @@ ggplot(aes(x=Seasonality, y=SumPFAS,
     xlab("")+
     scale_fill_manual(values = c("#005b93", "#a76968", "#bea6a0", "#f4e1e0"))+
     theme_bw()+
-    ylim(0, 30000)+
+    ylim(0, 10000)+
     theme(axis.text.x = element_text(angle = 45, hjust=1),
           panel.grid = element_blank(),
           legend.position = "none")
@@ -2278,8 +2131,7 @@ ggplot(aes(x=Seasonality, y=SumPFAS,
     annotate("text", label = "AFB Creek",
              x = 0.55, y = 29900,
              hjust =0, fontface = "bold")+
-    ylim(0, 30000)+
-  
+    ylim(0, 10000)+
     theme(panel.grid = element_blank(),
           axis.text = element_text(size = 13),
           # axis.text.x = element_blank(),
@@ -2298,7 +2150,7 @@ ggplot(aes(x=Seasonality, y=SumPFAS,
     xlab("")+
     scale_fill_manual(values = c("#005b93", "#a76968", "#bea6a0", "#f4e1e0"))+
     theme_bw()+
-    ylim(0, 30000)+
+    ylim(0, 10000)+
     theme(axis.text.x = element_text(angle = 45, hjust=1),
           panel.grid = element_blank(),
           legend.position = c(0.15, 0.75), 
@@ -2318,7 +2170,7 @@ ggplot(aes(x=Seasonality, y=SumPFAS,
     annotate("text", label = "Navy Rec Pond",
              x = 0.55, y = 29900,
              hjust =0, fontface = "bold")+
-    ylim(0, 30000)+
+    ylim(0, 10000)+
     theme(panel.grid = element_blank(),
           axis.text = element_text(size = 13),
           legend.position = c(0.85, 0.75), 
@@ -2841,6 +2693,7 @@ ggsave(
 ```
 
 ```{r BAFs}
+
 # WATER ----
 d_wg_wat_baf <- d_wg_wat %>%
   dplyr::select(SampleID, SampleDate, all_of(wgPFAS)) %>% 
@@ -2940,7 +2793,7 @@ jba_baf<-d_jba_baf %>%
         legend.position = c("right"),
         legend.background = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, vjust =1))
-ggsave(jba_baf,filename = "./Figures/SERDP/JBA_BAF.png",
+ggsave(jba_baf,filename = "./Figures/SERDP/JBA_BAF_mean_season.png",
        width = 13, height = 6.5, units = "in")
   
 
@@ -2978,7 +2831,7 @@ wg_baf<-d_wg_baf %>%
         legend.position = "right",
         legend.background = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1, vjust =1))
-ggsave(wg_baf,filename = "./Figures/SERDP/WG_BAF.png",
+ggsave(wg_baf,filename = "./Figures/SERDP/WG_BAF_mean_season.png",
        width = 13, height = 6.5, units = "in")
   
 ```
@@ -3238,8 +3091,6 @@ car::Anova((mod2.wg.spring))
 # plot(resid(mod2.wg.spring))
 
 ```
-
-
 
 ```{r stats PFAS specific}
 # data<-d_wg_biota

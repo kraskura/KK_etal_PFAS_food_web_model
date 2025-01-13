@@ -128,8 +128,8 @@ p_lines$y4 <- p_lines$x+log10(2)
 
 The model predictions for Willow Grove. This system has 3 fish species, and was sampled in fall. 
 
-```{r willow grove all data}
-source(here("Code", "R data tables", "WG.R")) # medians not same day
+```{r willow grove fall winter }
+source(here("Code", "R data tables", "WG_fallWinter.R")) # medians not same day
 
 # PFAS are known in each diet item
 settings_obsDiet = new_Settings(
@@ -139,18 +139,18 @@ settings_obsDiet = new_Settings(
   chooseEw = "empirical"
 )
 
-# used below in sed:water est part 
-WG_inputFiles_list<-inputFiles_list
-water_WG<-d.water %>%  # get the medians from the data
-  select(PFHxS.m, PFOS.m, PFOA.m, PFNA.m) %>% 
-  as.data.frame()
-water_WG<-water_WG/1000
-colnames(water_WG)<-c("PFHxS", "PFOS", "PFOA", "PFNA") 
-sed_WG<-d.sed %>%  # get the medians from the data
-  select(PFHxS.m, PFOS.m, PFOA.m, PFNA.m) %>% 
-  as.data.frame()
-colnames(sed_WG)<-c("PFHxS", "PFOS", "PFOA", "PFNA") 
-obs_ratio_WG<-sed_WG/water_WG
+# # used below in sed:water est part 
+# WG_inputFiles_list<-inputFiles_list
+# water_WG<-d.water %>%  # get the medians from the data
+#   select(PFHxS.m, PFOS.m, PFOA.m, PFNA.m) %>% 
+#   as.data.frame()
+# water_WG<-water_WG/1000
+# colnames(water_WG)<-c("PFHxS", "PFOS", "PFOA", "PFNA") 
+# sed_WG<-d.sed %>%  # get the medians from the data
+#   select(PFHxS.m, PFOS.m, PFOA.m, PFNA.m) %>% 
+#   as.data.frame()
+# colnames(sed_WG)<-c("PFHxS", "PFOS", "PFOA", "PFNA") 
+# obs_ratio_WG<-sed_WG/water_WG
 
 
 # run the bioaccumulation model: 

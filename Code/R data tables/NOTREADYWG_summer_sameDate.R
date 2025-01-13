@@ -4,42 +4,46 @@ library(readxl)
 library(here)
 here::i_am(path = "./Code/R data tables/WG_sameDate.R")
 
-# fish were samples on: NOV 10, 2020
+# seasons 
+# JBA/AFBC Spring sampling (water data): March 30  - April 28 2021: 
+# JBA/AFBC Summer sampling (water data): June 14 - July 16 2021
+# JBA/AFBC Fall/Winter sampling (water data): November 19 2020 - January 14 2021
+
+# WG/NRP Fall sampling (water data): October 9 - November 10 2020; second to last day 2020-11-05
+# WG/NRP Summer sampling (water data): June 15 - August 19 (some sparse sampling) 2021
+# WG/NRP Spring sampling (water data): February 9 - March 23 2021
+
+# sample dates
+# !! there are no same date samples for summer and spring
+
+# WG/NRP   as.Date("2020-11-10") (fall/winter) # <<<< this file 
+            # as.Date("2021-04-28") (spring)
+            # as.Date("2021-08-19") (summer) 
+ 
+# JBA/AFBC as.Date("2021-04-28") (spring)
+         # as.Date("2021-07-16") (summer)
 
 # pull in relevant data:
-d.fish<-read.csv(here("Data", "Original_Brown_etal", "WG", "WG_Biota_Data.csv")) #fish
-d.fish.w<-read_xlsx(path = here("Data", "Original_Brown_etal", "WG", "WG_fishMass_kk.xlsx"),
-                    sheet = "data")
-d.water<-read.csv(here("Data", "Original_Brown_etal", "WG", "WG_Water_Data.csv")) #water
-d.sed<-read.csv(here("Data", "Original_Brown_etal", "WG", "WG_Sediment_Data.csv")) #sediment
+d.fish<-read_xlsx(here("Data", "FINAL", "WG_Biota_Data.xlsx"), sheet = "Data") #fish
+d.water<-read_xlsx(here("Data", "FINAL", "WG_Water_Data.xlsx"), sheet = "Data") #water
+d.sed<-read_xlsx(here("Data", "FINAL", "WG_Sediment_Data.xlsx"), sheet = "Data") #sediment
 
-# filter out only mathching dates for tissue and other abiotic samples:
+# filter out fish sampling dates: 
 d.water<-d.water %>% 
-  filter(SampleDate == "10-Nov-20")
+  filter(SampleDate == as.Date("2020-11-10"))
 d.sed<-d.sed %>% 
-  filter(SampleDate == "10-Nov-20")
+  filter(SampleDate == as.Date("2020-11-10"))
 
-# get sample sizes for everything first
-n.fish<-d.fish %>% 
-  mutate(sampleID2 = substr(SampleID, start = 1, stop = 6)) %>% 
-  dplyr:::group_by(Species) %>% 
-  summarize(n = n_distinct(sampleID2))
-  
-n.sed<-d.sed %>% 
-  mutate(sampleID2 = substr(SampleID, start = 1, stop = 6)) %>% 
-  summarize(n = n_distinct(sampleID2))
 
-n.water<-d.water %>% # temperature and PFAA
-  mutate(sampleID2 = substr(SampleID, start = 1, stop = 6)) %>% 
-  summarize(n = n_distinct(sampleID2))
-
-# filter out data needed and format. 
 d.fish<-d.fish %>%
-  mutate_at(vars(Species, Tissue), factor) %>% 
-  select(Species, Tissue, Length, 
+  mutate_at(vars(Species, Tissue), factor) %>%
+  mutate(Seasonality = if_else(SampleDate > as.Date("2021-06-01"), "summer", 
+                              if_else(SampleDate < as.Date("2020-11-20"), "fall/winter",
+                                      "spring"))) %>% 
+  filter(c(Tissue == "Whole Body" | Tissue == "Muscle") & Seasonality == "fall/winter") %>% 
+  select(Species, Tissue, Weight, 
          PFBA, PFPeA, PFHxA, PFHpA, PFOA, PFOS,
          PFNA, PFHpA, PFHxA, PFHxS, PFPeS) %>% 
-  filter(c(Tissue == "WholeBody" | Tissue == "Muscle")) %>% 
   mutate(PFUA = 0, PFDA = 0) %>% 
   mutate(Sp = if_else(Species == "Banded Killifish", "Kil",
                 if_else(Species == "Creek Chubsucker", "Chu", 
@@ -54,16 +58,13 @@ d.fish<-d.fish %>%
                                     if_else(Species == "Bluegill", "Bgl",
                                       if_else(Species == "Prey", "Pry", NA)))))))))))))
 
-# fillet-to-whole body conversion 
-d.fish[d.fish$Tissue == "Muscle", c(4:14)]<-d.fish[d.fish$Tissue == "Muscle", c(4:14)]*2.5
-d.fish<-d.fish %>% 
-  dplyr::group_by(Sp) %>% 
-  summarize(PFHxS.m = median(PFHxS), PFHxS.min = min(PFHxS), PFHxS.max = max(PFHxS),
-            PFOS.m = median(PFOS), PFOS.min = min(PFOS), PFOS.max = max(PFOS),
-            PFOA.m = median(PFOA), PFOA.min = min(PFOA), PFOA.max = max(PFOA),
-            PFNA.m = median(PFNA), PFNA.min = min(PFNA), PFNA.max = max(PFNA),
-            PFDA.m = median(PFDA), PFDA.min = min(PFDA), PFDA.max = max(PFDA),
-            PFUA.m = median(PFUA), PFUA.min = min(PFUA), PFUA.max = max(PFUA))
+# Fish masses
+d.fish.w <- d.fish %>% 
+  group_by(Sp, Species) %>% 
+  summarise(n = n(), 
+            median_mass = median(Weight, na.rm = TRUE), 
+            min_mass = min(Weight, na.rm = TRUE), 
+            max_mass = max(Weight, na.rm = TRUE))
 
 d.water<-d.water %>%
   mutate_at(vars(SampleID, Location), factor) %>% 
