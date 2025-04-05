@@ -2,7 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-ignoreMisc/
-Data/outputs/*.csv
 .env
-Data/MDE/
+
+./R/SS-deprecated
+

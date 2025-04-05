@@ -14,6 +14,7 @@ The adopted PFAS food web was published by [Sun et al. (2022)](https://doi.org/1
 
 The model use and implementation: The code **EXECUTE.R** in the local directly runs all modelling files to obtain results.
 
+Class --> Steady State --> Bioaccumulation --> 
 ##### .Code/R model/
 
 -   contains R files (all functions):
@@ -70,6 +71,17 @@ The model use and implementation: The code **EXECUTE.R** in the local directly r
 
 -   The output figures are found in ./Figure/SERDP/
 
+------------------------------------------------------------------------
+### To-Do list (january 2025)
+
+- Incorporate avian model in the existing framework 
+    * Kelly et al 2024 "Development and Evaluation of Aquatic and Terrestrial Food Web Bioaccumulation Models for Per- and Polyfluoroalkyl SubstancesArticle link copied!
+" [https://pubs.acs.org/doi/10.1021/acs.est.4c02134](https://pubs.acs.org/doi/10.1021/acs.est.4c02134)
+    * Fremlin et al 20
+
+- Expand PFAS that can be predicted by the model 
+    * Kelly et al 2024 
+    
 ------------------------------------------------------------------------
 
 ### Contact info:
